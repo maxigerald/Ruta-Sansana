@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ruta Sansana - Recorridos</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; margin: 0; height: 100vh; }
+        #sidebar { width: 320px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        #map { flex-grow: 1; height: 100%; }
+        .section-title { font-weight: bold; margin-top: 15px; color: #003366; font-size: 1.1em; border-bottom: 2px solid #003366; padding-bottom: 3px; }
+        ul { padding-left: 15px; margin-top: 5px; }
+        li { margin-bottom: 6px; }
+        a { text-decoration: none; color: #0066cc; }
+        a:hover { text-decoration: underline; color: #004080; }
+        .highlight { background-color: #eef2f7; padding: 10px; border-radius: 5px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <!-- Panel Lateral de Opciones -->
+    <div id="sidebar">
+        <h2>Ruta Sansana 🚌</h2>
+        <p>Monitoreo y recorridos en Valparaíso y Viña</p>
+        
+        <!-- SECCIÓN 1: Categorías de Tramos -->
+        <div class="section-title">Tramos Principales</div>
+        <ul>
+            {% for cat in categorias %}
+                <li>
+                    <a href="?categoria={{ cat.id }}">📍 {{ cat.nombre }}</a>
+                </li>
+            {% empty %}
+                <li>No hay categorías registradas. Todavía puedes crearlas en el <a href="/admin/" target="_blank">Admin</a>.</li>
+            {% endfor %}
+        </ul>
+
+
+        <!-- SECCIÓN 3: Micros dinámicas según la categoría seleccionada -->
+        {% if micros_filtradas %}
+            <hr>
+            <div class="section-title">Micros en esta categoría:</div>
+            <ul>
+                {% for m in micros_filtradas %}
+                    <li>
+                        <a href="?categoria={{ request.GET.categoria }}&micro={{ m.id }}">
+                            Micro {{ m.numero }} ({{ m.linea_nombre }})
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <!-- SECCIÓN 4: Información de la Micro Seleccionada -->
+        {% if micro_seleccionada %}
+            <div class="highlight">
+                <h3>Visualizando Ruta:</h3>
+                <p><strong>Micro {{ micro_seleccionada.numero }}</strong></p>
+                <p>Línea: {{ micro_seleccionada.linea_nombre }}</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Contenedor del Mapa -->
+    <div id="map"></div>
+
+    <!-- JS de Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. Inicializar mapa centrado estratégicamente entre Valparaíso y Viña del Mar (Zoom 12 abarca todo perfecto)
+        var map = L.map('map').setView([-33.036, -71.555], 12);
+        
+        // 2. Tu Token público real de Mapbox (asegúrate de que esté completo aquí)
+        var mapboxToken = '{{ mapbox_token }}';
+
+        // 3. Capa base de Mapbox (Estilo Streets)
+        L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
+            tileSize: 512,
+            zoomOffset: -1,
+            maxZoom: 19,
+            attribution: '© Mapbox © OpenStreetMap'
+        }).addTo(map);
+
+        // 4. Si hay una micro seleccionada, dibujar su recorrido vectorial y hacer zoom automático en la ruta
+        {% if micro_seleccionada and coords_recorrido %}
+        var latlngs = [
+            {% for coord in coords_recorrido %}
+                [{{ coord.1 }}, {{ coord.0 }}],
+            {% endfor %}
+        ];
+
+            var polyline = L.polyline(latlngs, {color: '#e74c3c', weight: 5}).addTo(map);
+            
+            // Ajusta los límites del mapa automáticamente al tamaño del recorrido de la micro
+            map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
+        {% endif %}
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 101,
+      "lat": -33.0470,
+      "lon": -71.5430,
+      "tags": {
+        "name": "Tienda Central Ruta Sansana"
+      }
+    },
+    {
+      "type": "node",
+      "id": 102,
+      "lat": -33.0500,
+      "lon": -71.5500,
+      "tags": {
+        "name": "Cafetería Campus"
+      }
+    }
+  ]
+}
