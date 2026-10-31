@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import dj_database_url
 import os
 from dotenv import load_dotenv
 
@@ -10,19 +10,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_DIRS=[os.path.join(BASE_DIR, 'static')]
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'gis',           #Nombre de la base de datos
-        'USER': 'postgres',       #Usuario
-        'PASSWORD': '123456789', #Contraseña
-        'HOST': 'localhost',     #
-        'PORT': '5432',
-    }
-}
 
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default='postgresql://postgres.fcrrkpraehutnwagzipy:Grupo9.2026@aws-0-us-east-1.pooler.supabase.com:5432/postgres',
+        engine='django.contrib.gis.db.backends.postgis'
+    )
+}
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-2o^mbvaz$z%tvxp(qqsqa+#02fk692%v6g$81a7+lj^@!-cvz#'
 
