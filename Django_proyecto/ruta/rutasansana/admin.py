@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.forms import Textarea
 from django.contrib.gis.db import models as gis_models
-from .models import CategoriaRuta, Micro
+from .models import CategoriaRuta, Micro, Paradero, Reporte
 
 @admin.register(Micro)
-class MicroAdmin(admin.ModelAdmin):  # Cambiamos GISModelAdmin por admin.ModelAdmin normal
+class MicroAdmin(admin.ModelAdmin):
     formfield_overrides = {
         gis_models.LineStringField: {'widget': Textarea(attrs={'rows': 5, 'cols': 50})},
     }
@@ -13,14 +13,15 @@ class MicroAdmin(admin.ModelAdmin):  # Cambiamos GISModelAdmin por admin.ModelAd
 class CategoriaRutaAdmin(admin.ModelAdmin):
     pass
 
-"""from django.contrib import admin
-from django.contrib.gis.admin import GISModelAdmin
-from .models import CategoriaRuta, Micro
+@admin.register(Paradero)
+class ParaderoAdmin(admin.ModelAdmin):
+    list_display = ('nombre',)
+    search_fields = ('nombre',)
+    formfield_overrides = {
+        gis_models.PointField: {'widget': Textarea(attrs={'rows': 2, 'cols': 40})},
+    }
 
-@admin.register(Micro)
-class MicroAdmin(GISModelAdmin):
-    pass  # Usa el mapa interactivo nativo de GeoDjango sin forzar widgets de texto
-
-@admin.register(CategoriaRuta)
-class CategoriaRutaAdmin(admin.ModelAdmin):
-    pass"""
+@admin.register(Reporte)
+class ReporteAdmin(admin.ModelAdmin):
+    list_display = ('micro', 'paradero', 'nivel_ocupacion', 'minutos_estimados', 'es_fiable', 'fecha_creacion')
+    list_filter = ('es_fiable', 'fecha_creacion')

@@ -1,19 +1,21 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Ruta Sansana - Recorridos</title>
+    <title>Ruta Sansana - Mapa Interactivo</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { font-family: Arial, sans-serif; display: flex; margin: 0; height: 100vh; }
-        #sidebar { width: 320px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
-        #map { flex-grow: 1; height: 100%; }
+        #sidebar { width: 340px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); flex-shrink: 0; }
+        #map { flex-grow: 1; height: 100vh; }
         .section-title { font-weight: bold; margin-top: 15px; color: #003366; font-size: 1.1em; border-bottom: 2px solid #003366; padding-bottom: 3px; }
         ul { padding-left: 15px; margin-top: 5px; }
-        li { margin-bottom: 6px; }
+        li { margin-bottom: 8px; }
         a { text-decoration: none; color: #0066cc; }
         a:hover { text-decoration: underline; color: #004080; }
-        .highlight { background-color: #eef2f7; padding: 10px; border-radius: 5px; margin-top: 15px; }
+        .highlight { background-color: #eef2f7; padding: 12px; border-radius: 5px; margin-top: 15px; }
+        .badge-micro { color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; }
     </style>
 </head>
 <body>
@@ -22,8 +24,8 @@
     <div id="sidebar">
         <h2>Ruta Sansana 🚌</h2>
         <p>Monitoreo y recorridos en Valparaíso y Viña</p>
-        
-        <!-- SECCIÓN 1: Categorías de Tramos -->
+
+        <!-- SECCIÓN 1: Categorías de Tramos (Tu código) -->
         <div class="section-title">Tramos Principales</div>
         <ul>
             {% for cat in categorias %}
@@ -35,28 +37,70 @@
             {% endfor %}
         </ul>
 
-
-        <!-- SECCIÓN 3: Micros dinámicas según la categoría seleccionada -->
+        <!-- SECCIÓN 2: Micros dinámicas según la categoría seleccionada (Tu código) -->
         {% if micros_filtradas %}
-            <hr>
-            <div class="section-title">Micros en esta categoría:</div>
+            <div class="section-title">Micros en este tramo:</div>
             <ul>
                 {% for m in micros_filtradas %}
                     <li>
+                        <!-- Mantenemos la estética del badge de color de tu compañera -->
                         <a href="?categoria={{ request.GET.categoria }}&micro={{ m.id }}">
-                            Micro {{ m.numero }} ({{ m.linea_nombre }})
+                            <span class="badge-micro" style="background-color: {{ m.color|default:'#003366' }};">Micro {{ m.numero }}</span> {{ m.linea_nombre }}
                         </a>
                     </li>
                 {% endfor %}
             </ul>
         {% endif %}
 
-        <!-- SECCIÓN 4: Información de la Micro Seleccionada -->
+        <hr>
+
+        <!-- SECCIÓN 3: Paradero Seleccionado (Código de tu compañera) -->
+        {% if paradero_seleccionado %}
+            <div class="highlight" style="background: #e8f4fd; border-left: 4px solid #0066cc;">
+                <h3 style="margin: 0 0 5px 0; color: #003366;">📍 Paradero Seleccionado</h3>
+                <p style="margin: 0; font-size: 1.1em; font-weight: bold;">{{ paradero_seleccionado.nombre }}</p>
+                <a href="?" style="font-size: 0.85em; display: inline-block; margin-top: 8px;">🔄 Elegir otro paradero / Limpiar filtro</a>
+            </div>
+
+            <div class="section-title">Micros que llegan aquí:</div>
+            {% if micros_en_paradero %}
+                <ul>
+                    {% for m in micros_en_paradero %}
+                        <li>
+                            <a href="?paradero={{ paradero_seleccionado.id }}&micro={{ m.id }}">
+                                <span class="badge-micro" style="background-color: {{ m.color|default:'#003366' }};">Micro {{ m.numero }}</span> {{ m.linea_nombre }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color: #666; font-size: 0.9em; margin-top: 10px;">No hay micros asignadas a este paradero todavía.</p>
+            {% endif %}
+        {% else %}
+            <p style="color: #e67e22; font-weight: bold; margin-top: 20px;">👉 Explora el mapa y selecciona cualquier parada.</p>
+        {% endif %}
+
+        <!-- SECCIÓN 4: INFORMACIÓN DETALLADA DE LA MICRO Y REPORTES (Código de tu compañera) -->
         {% if micro_seleccionada %}
-            <div class="highlight">
-                <h3>Visualizando Ruta:</h3>
-                <p><strong>Micro {{ micro_seleccionada.numero }}</strong></p>
-                <p>Línea: {{ micro_seleccionada.linea_nombre }}</p>
+            <div class="highlight" style="background: #eef9f2; border-left: 4px solid {{ micro_seleccionada.color|default:'#2ecc71' }};">
+                <h3 style="margin: 0 0 8px 0; color: {{ micro_seleccionada.color|default:'#27ae60' }};">Micro {{ micro_seleccionada.numero }}</h3>
+                <p style="margin: 4px 0;">Recorrido: <strong>{{ micro_seleccionada.linea_nombre }}</strong></p>
+                
+                {% if estado_reportes %}
+                    <hr style="border: 0; border-top: 1px solid #d4edda; margin: 8px 0;">
+                    <p style="margin: 4px 0;">🕒 Tiempo estimado: <strong>{{ estado_reportes.minutos }} mins</strong></p>
+                    <p style="margin: 4px 0;">🚌 Ocupación actual: <strong>{{ estado_reportes.ocupacion }} / 3</strong></p>
+                    <p style="margin: 4px 0;">⚠️ Alerta: {{ estado_reportes.alerta }}</p>
+                    {% if estado_reportes.incertidumbre %}
+                        <p style="margin: 6px 0 0 0; font-size: 0.85em; color: #e67e22;"><em>⚠️ {{ estado_reportes.mensaje_incertidumbre }}</em></p>
+                    {% endif %}
+                {% else %}
+                    <p style="margin: 4px 0; color: #7f8c8d; font-size: 0.9em;">Selecciona un paradero en el mapa para ver el estado en tiempo real de esta micro.</p>
+                {% endif %}
+
+                <button onclick="alert('¡Aquí se abrirá el modal para enviar tu reporte colaborativo de ocupación!');" style="width: 100%; background: {{ micro_seleccionada.color|default:'#003366' }}; color: white; border: none; padding: 8px; border-radius: 4px; margin-top: 10px; cursor: pointer; font-weight: bold;">
+                    + Enviar Reporte de Ocupación
+                </button>
             </div>
         {% endif %}
     </div>
@@ -67,13 +111,11 @@
     <!-- JS de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. Inicializar mapa centrado estratégicamente entre Valparaíso y Viña del Mar (Zoom 12 abarca todo perfecto)
-        var map = L.map('map').setView([-33.036, -71.555], 12);
+        var map = L.map('map').setView([-33.036, -71.555], 13);
         
-        // 2. Tu Token público real de Mapbox (asegúrate de que esté completo aquí)
-        var mapboxToken = '{{ mapbox_token }}';
+        // Uso de la variable segura de entorno para proteger tu cuenta
+        var mapboxToken = '{{ mapbox_token }}'; 
 
-        // 3. Capa base de Mapbox (Estilo Streets)
         L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
             tileSize: 512,
             zoomOffset: -1,
@@ -81,17 +123,49 @@
             attribution: '© Mapbox © OpenStreetMap'
         }).addTo(map);
 
-        // 4. Si hay una micro seleccionada, dibujar su recorrido vectorial y hacer zoom automático en la ruta
-        {% if micro_seleccionada and coords_recorrido %}
-        var latlngs = [
-            {% for coord in coords_recorrido %}
-                [{{ coord.1 }}, {{ coord.0 }}],
-            {% endfor %}
-        ];
+        // Ícono personalizado del pin de micro para los paraderos (Código de tu compañera)
+        var iconoBus = L.icon({
+            iconUrl: '{% static "rutasansana/img/bus_pin.png" %}',
+            iconSize: [38, 38],
+            iconAnchor: [19, 38],
+            popupAnchor: [0, -35]
+        });
 
-            var polyline = L.polyline(latlngs, {color: '#e74c3c', weight: 5}).addTo(map);
+        // Dibujar TODOS los paraderos en el mapa (Código de tu compañera)
+        {% if paraderos %}
+            {% for p in paraderos %}
+                {% if p.ubicacion %}
+                    var marker = L.marker([{{ p.ubicacion.y }}, {{ p.ubicacion.x }}], {icon: iconoBus}).addTo(map);
+                    
+                    marker.bindPopup("<b>{{ p.nombre }}</b><br><br><a href='?paradero={{ p.id }}' style='background:#003366; color:white; padding:5px 10px; border-radius:4px; text-decoration:none;'>Seleccionar paradero</a>");
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+        // Dibujar la ruta desde OSRM (Tu código modificado para usar el color asignado a la micro)
+        {% if micro_seleccionada and coords_recorrido %}
+            var latlngs = [
+                {% for coord in coords_recorrido %}
+                    [{{ coord.1 }}, {{ coord.0 }}],
+                {% endfor %}
+            ];
+
+            var colorMicro = "{{ micro_seleccionada.color|default:'#e74c3c' }}";
+
+            var polyline = L.polyline(latlngs, {color: colorMicro, weight: 6}).addTo(map);
+            map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
             
-            // Ajusta los límites del mapa automáticamente al tamaño del recorrido de la micro
+        // Fallback: Si no hay OSRM pero sí hay ruta dibujada manual (Código de tu compañera)
+        {% elif micro_seleccionada and micro_seleccionada.recorrido %}
+            var latlngs = [
+                {% for coord in micro_seleccionada.recorrido.coords %}
+                    [{{ coord.1 }}, {{ coord.0 }}],
+                {% endfor %}
+            ];
+
+            var colorMicro = "{{ micro_seleccionada.color|default:'#e74c3c' }}";
+
+            var polyline = L.polyline(latlngs, {color: colorMicro, weight: 6}).addTo(map);
             map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
         {% endif %}
     </script>
