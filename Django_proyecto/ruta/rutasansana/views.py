@@ -37,32 +37,15 @@ def mapa_micros(request):
         except Paradero.DoesNotExist:
             pass
 
-    # 6. Lógica Principal de Micro y OSRM (Combinado)
+# 6. Lógica Principal de Micro (Leyendo el trazado exacto de tu archivo GeoJSON guardado en BD)
     if micro_id:
         try:
             micro_seleccionada = Micro.objects.get(id=micro_id)
             
-            # --- Trazado de rutas con OSRM (De tu código) ---
-            if micro_seleccionada.numero == 505 or micro_seleccionada.id == int(micro_id):
-                puntos_clave = [
-                    "-71.64741866446157,-33.03684018534808",
-                    "-71.64584861148558,-33.03834383833594",
-                    "-71.64654169616931,-33.04027837993849",
-                    "-71.64559588842447,-33.04132523439357",
-                    "-71.64377538436919,-33.04041081277655",
-                    "-71.64403335053208,-33.036796283061896",
-                    "-71.64215678471813,-33.034272808403294",
-                    "-71.63630394090376,-33.029961615203455",
-                    "-71.64030833732657,-33.02495177010322",
-                ]
-                waypoints = ";".join(puntos_clave)
-                url = f"http://router.project-osrm.org/route/v1/driving/{waypoints}?overview=full&geometries=geojson"
-                response = requests.get(url)
-                data = response.json()
+            # Extraemos las coordenadas que se importaron desde tu archivo .geojson
+            if micro_seleccionada.recorrido:
+                coords_recorrido = list(micro_seleccionada.recorrido.coords)
                 
-                if "routes" in data and len(data["routes"]) > 0:
-                    coords_recorrido = data["routes"][0]["geometry"]["coordinates"]
-                    
         except Micro.DoesNotExist:
             pass
 
