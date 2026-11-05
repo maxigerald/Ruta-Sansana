@@ -1,14 +1,14 @@
-import requests
+import os
 from django.conf import settings
 from django.shortcuts import render
 from django.utils import timezone
 from datetime import timedelta
 
-# Importamos los modelos de ambos códigos
+# Importamos todos los modelos
 from .models import Micro, CategoriaRuta, Paradero, Reporte
 
 def mapa_micros(request):
-    # 1. Obtener todos los parámetros GET (de ambos)
+    # 1. Obtener parámetros GET
     categoria_id = request.GET.get('categoria')
     micro_id = request.GET.get('micro')
     paradero_id = request.GET.get('paradero')
@@ -17,7 +17,7 @@ def mapa_micros(request):
     categorias = CategoriaRuta.objects.all()
     paraderos = Paradero.objects.all()
     
-    # 3. Variables de estado iniciales
+    # 3. Variables de estado
     micros_filtradas = []
     micros_en_paradero = []
     micro_seleccionada = None
@@ -25,11 +25,11 @@ def mapa_micros(request):
     coords_recorrido = []
     estado_reportes = None
 
-    # 4. Lógica de Categorías (De tu código)
+    # 4. Lógica de Categorías
     if categoria_id:
         micros_filtradas = Micro.objects.filter(categorias__id=categoria_id)
 
-    # 5. Lógica de Paraderos (Del código de tu compañera)
+    # 5. Lógica de Paraderos
     if paradero_id:
         try:
             paradero_seleccionado = Paradero.objects.get(id=paradero_id)
@@ -37,19 +37,17 @@ def mapa_micros(request):
         except Paradero.DoesNotExist:
             pass
 
-# 6. Lógica Principal de Micro (Leyendo el trazado exacto de tu archivo GeoJSON guardado en BD)
+    # 6. Lógica Principal de Micro (Leyendo el LineString exacto de la BD / Supabase)
     if micro_id:
         try:
             micro_seleccionada = Micro.objects.get(id=micro_id)
-            
-            # Extraemos las coordenadas que se importaron desde tu archivo .geojson
             if micro_seleccionada.recorrido:
+                # Extraemos las coordenadas del campo LineString de PostGIS
                 coords_recorrido = list(micro_seleccionada.recorrido.coords)
-                
         except Micro.DoesNotExist:
             pass
 
-    # 7. Lógica de Reportes en Tiempo Real (Del código de tu compañera)
+    # 7. Lógica de Reportes en Tiempo Real (De tu compañera)
     if micro_seleccionada and paradero_seleccionado:
         tiempo_limite = timezone.now() - timedelta(minutes=5)
         reportes_activos = Reporte.objects.filter(
@@ -86,16 +84,13 @@ def mapa_micros(request):
                 "incertidumbre": True
             }
 
-    # 8. Contexto final que recibe el HTML (Unificado)
+    # 8. Contexto final para la plantilla (Token seguro desde settings)
     context = {
-        # Tus variables:
         'categorias': categorias,
         'micros_filtradas': micros_filtradas,
         'categoria_activa': int(categoria_id) if categoria_id else None,
         'coords_recorrido': coords_recorrido,
         'mapbox_token': settings.MAPBOX_TOKEN,
-        
-        # Variables compartidas/de tu compañera:
         'paraderos': paraderos,
         'paradero_seleccionado': paradero_seleccionado,
         'micros_en_paradero': micros_en_paradero,

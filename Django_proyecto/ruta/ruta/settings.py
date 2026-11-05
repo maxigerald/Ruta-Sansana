@@ -107,12 +107,17 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Directorio donde se recopilarán los archivos estáticos
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Directorio donde Django buscará tus archivos estáticos en desarrollo
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'rutasansana/static'),
+]
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-import os
 
 if os.name == 'nt':
     os.environ['PATH'] = r'C:\OSGeo4W\bin;' + os.environ['PATH']
