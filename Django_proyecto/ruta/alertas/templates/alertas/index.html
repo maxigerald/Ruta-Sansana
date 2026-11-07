@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Alertas y chats - Ruta Sansana</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 24px; color: #1e293b; }
+        .wrap { max-width: 640px; margin: 0 auto; }
+        h1 { color: #003366; font-size: 1.4em; }
+        a { color: #0066cc; text-decoration: none; } a:hover { text-decoration: underline; }
+        .card { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-top: 10px; }
+        .alerta { padding: 10px; border-radius: 5px; margin-top: 8px; font-size: .9em; }
+        .info { background: #e0f2fe; border: 1px solid #bae6fd; }
+        .warn { background: #fff7ed; border: 1px solid #fed7aa; }
+        .crit { background: #ffebee; border: 1px solid #ffcdd2; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <a href="/">← Volver al mapa</a>
+    <h1>Alertas y chats por tipo de micro 🚌</h1>
+
+    {% for a in alertas %}
+        <div class="alerta {{ a.severidad }}"><strong>⚠ {{ a.titulo }}</strong>{% if a.mensaje %}<br>{{ a.mensaje }}{% endif %}</div>
+    {% endfor %}
+
+    <h3 style="color:#003366">Elige el tipo de micro que quieres tomar</h3>
+    {% for c in categorias %}
+        <div class="card"><a href="{% url 'alertas:sala' c.id %}">💬 {{ c.nombre }}</a></div>
+    {% empty %}
+        <div class="card">No hay categorías registradas todavía.</div>
+    {% endfor %}
+</div>
+</body>
+</html>

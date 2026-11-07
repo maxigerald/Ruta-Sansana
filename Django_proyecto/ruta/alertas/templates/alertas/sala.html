@@ -1,0 +1,261 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ categoria.nombre }} - Alertas y chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; color: #1e293b; }
+        #izq { width: 380px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-sizing: border-box; box-shadow: 2px 0 5px rgba(0,0,0,.1); }
+        #der { flex: 1; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; min-width: 0; }
+        h2 { color: #003366; font-size: 1.2em; margin: 8px 0; }
+        a { color: #0066cc; text-decoration: none; } a:hover { text-decoration: underline; }
+        .titulo { font-weight: bold; color: #003366; border-bottom: 2px solid #003366; padding-bottom: 3px; margin: 14px 0 8px; }
+        .alerta { padding: 8px 10px; border-radius: 5px; margin-top: 6px; font-size: .88em; }
+        .info { background: #e0f2fe; border: 1px solid #bae6fd; }
+        .warn { background: #fff7ed; border: 1px solid #fed7aa; }
+        .crit { background: #ffebee; border: 1px solid #ffcdd2; }
+        .micro { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-top: 12px; transition: border 0.3s, box-shadow 0.3s; }
+        
+        /* Resalta la micro enfocada desde el mapa */
+        .micro:target { border: 2px solid #dc2626; box-shadow: 0 0 10px rgba(220, 38, 38, 0.4); }
+
+        .micro header { background: #990000; color: #fff; margin: -12px -12px 10px; padding: 8px 12px; border-radius: 7px 7px 0 0; font-weight: bold; }
+        .estado { font-size: .88em; margin: 4px 0; }
+        .poco { color: #d9534f; font-size: .82em; font-style: italic; }
+        
+        /* Formularios y campos de reporte */
+        .form-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .campo-grupo { display: flex; flex-direction: column; gap: 3px; }
+        .campo-label { font-size: 0.8em; font-weight: bold; color: #475569; display: flex; align-items: center; gap: 4px; }
+        .star-icon { height: 1.1em; width: auto; vertical-align: middle; }
+
+        select, button, input { font-size: .9em; padding: 6px 8px; border-radius: 5px; border: 1px solid #cbd5e1; }
+        select { background-color: #fff; cursor: pointer; }
+
+        /* Colores de baja opacidad (RGBA) para las opciones de condición */
+        .opt-5 { background-color: rgba(34, 197, 94, 0.15); color: #15803d; font-weight: bold; } /* Excelente - Verde */
+        .opt-4 { background-color: rgba(132, 204, 22, 0.15); color: #4d7c0f; font-weight: bold; } /* Bueno - Verde Lima */
+        .opt-3 { background-color: rgba(234, 179, 8, 0.15); color: #a16207; font-weight: bold; }  /* Regular - Amarillo */
+        .opt-2 { background-color: rgba(249, 115, 22, 0.15); color: #c2410c; font-weight: bold; } /* Malo - Naranja */
+        .opt-1 { background-color: rgba(239, 68, 68, 0.15); color: #b91c1c; font-weight: bold; }  /* Pésimo - Rojo */
+
+        .btn { background: #dc2626; color: #fff; border: 0; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; padding: 8px; margin-top: 6px; }
+        .btn:hover { background: #b91c1c; }
+        .msg-ok { font-size: .82em; color: #166534; min-height: 1em; margin-top: 4px; font-weight: bold; }
+        .msg-err { font-size: .82em; color: #b91c1c; min-height: 1em; margin-top: 4px; font-weight: bold; }
+        
+        #chat { flex: 1; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #fff; }
+        #chat p { margin: 4px 0; font-size: .92em; word-wrap: break-word; }
+        #chat .sys { color: #64748b; font-style: italic; }
+        #chat .al { background: #fff7ed; border: 1px solid #fed7aa; padding: 6px; border-radius: 5px; }
+        #chat .al.crit { background: #ffebee; border-color: #ffcdd2; }
+        #entrada { display: flex; gap: 6px; margin-top: 8px; }
+        #entrada input { flex: 1; }
+        @media (max-width: 760px) { body { flex-direction: column; height: auto; } #izq { width: 100%; } #chat { min-height: 300px; } }
+    </style>
+</head>
+<body>
+<div id="izq">
+    <a href="/">← Mapa</a> · <a href="{% url 'alertas:indice' %}">Otros tipos</a>
+    <h2>{{ categoria.nombre }}</h2>
+
+    <div class="titulo">Alertas vigentes</div>
+    <div id="alertas">
+        {% for a in alertas %}
+            <div class="alerta {{ a.severidad }}"><strong>⚠ {{ a.titulo }}</strong>{% if a.mensaje %}<br>{{ a.mensaje }}{% endif %}</div>
+        {% empty %}
+            <div class="estado" id="sin-alertas">Sin alertas por ahora.</div>
+        {% endfor %}
+    </div>
+
+    <div class="titulo">Estado de las micros</div>
+    {% for m in micros %}
+        <div class="micro" id="micro-{{ m.id }}" data-id="{{ m.id }}">
+            <header>Micro {{ m.numero }} · {{ m.linea_nombre }}</header>
+            <div class="estado" data-campo="ocupacion">Cargando…</div>
+            <div class="estado" data-campo="parada"></div>
+            <div class="estado" data-campo="estado_fisico"></div>
+            <div class="poco" data-campo="poco"></div>
+
+            <div class="form-grid">
+                <div class="campo-grupo">
+                    <span class="campo-label">Ocupación (*)</span>
+                    <select data-campo="sel-ocupacion">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="1">Vacía</option>
+                        <option value="2">Media</option>
+                        <option value="3">Llena</option>
+                    </select>
+                </div>
+
+                <div class="campo-grupo">
+                    <span class="campo-label">¿Paró? (opcional)</span>
+                    <select data-campo="sel-parada">
+                        <option value="sin_dato">Sin dato</option>
+                        <option value="paro">Paró</option>
+                        <option value="no_paro">No paró</option>
+                    </select>
+                </div>
+
+                <div class="campo-grupo">
+                    <span class="campo-label">
+                        <img src="{% static 'rutasansana/img/estrella_estado_micro.png' %}" alt="Estrella" class="star-icon">
+                        Condición física (opcional)
+                    </span>
+                    <select data-campo="sel-estado-fisico">
+                        <option value="0">Sin dato</option>
+                        <option value="5" class="opt-5">Excelente (5 ★)</option>
+                        <option value="4" class="opt-4">Bueno (4 ★)</option>
+                        <option value="3" class="opt-3">Regular (3 ★)</option>
+                        <option value="2" class="opt-2">Malo (2 ★)</option>
+                        <option value="1" class="opt-1">Pésimo (1 ★)</option>
+                    </select>
+                </div>
+
+                <button class="btn" data-campo="enviar">Enviar reporte</button>
+            </div>
+
+            <div class="msg-ok" data-campo="ok"></div>
+            <div class="msg-err" data-campo="err"></div>
+        </div>
+    {% empty %}
+        <div class="estado">Este tipo aún no tiene micros asignadas.</div>
+    {% endfor %}
+</div>
+
+<div id="der">
+    <h2>💬 Chat de {{ categoria.nombre }}</h2>
+    <div class="estado">Mensajes visibles para todos los que miran este tipo de micro.</div>
+    <div id="chat"></div>
+    <div id="entrada">
+        <input id="alias" placeholder="Tu alias (*)" maxlength="20" style="width:110px">
+        <input id="texto" placeholder="Escribe un mensaje…" maxlength="300" autocomplete="off">
+        <button class="btn" id="enviar" style="width:auto; margin-top:0;">Enviar</button>
+    </div>
+</div>
+
+<script>
+const CSRF = "{{ csrf_token }}";
+const CATEGORIA = {{ categoria.id }};
+const $ = (root, campo) => root.querySelector(`[data-campo="${campo}"]`);
+
+/* ---------- Estado y reportes ---------- */
+function pintarEstado(card, e) {
+    $(card, "ocupacion").textContent = e.ocupacion !== null
+        ? `👥 Ocupación: ${e.ocupacion_texto} (${e.ocupacion}/3)` : "👥 Sin reportes recientes";
+    $(card, "parada").textContent = e.pct_no_paro !== null
+        ? `🛑 ${e.pct_no_paro}% reporta que no paró` : "";
+    
+    if (e.estado_fisico_texto && e.estado_fisico_texto !== "Sin datos") {
+        $(card, "estado_fisico").innerHTML = `🛠️ Condición: <strong>${e.estado_fisico_texto}</strong>`;
+    } else {
+        $(card, "estado_fisico").textContent = "";
+    }
+    
+    $(card, "poco").textContent = (e.reportes > 0 && !e.confiable) ? "Pocos reportes; el dato puede variar." : "";
+}
+
+async function cargarEstado(card) {
+    try {
+        const r = await fetch(`/alertas/api/micro/${card.dataset.id}/estado/`);
+        pintarEstado(card, await r.json());
+    } catch (_) { $(card, "ocupacion").textContent = "No se pudo cargar el estado"; }
+}
+
+document.querySelectorAll(".micro").forEach(card => {
+    cargarEstado(card);
+    setInterval(() => cargarEstado(card), 20000);
+    
+    $(card, "enviar").onclick = async () => {
+        $(card, "ok").textContent = ""; 
+        $(card, "err").textContent = "";
+        
+        const aliasVal = document.getElementById("alias").value.trim();
+        if (!aliasVal) {
+            $(card, "err").textContent = "Por favor, ingresa tu alias en el panel derecho antes de reportar.";
+            document.getElementById("alias").focus();
+            return;
+        }
+
+        const ocupacionVal = $(card, "sel-ocupacion").value;
+        if (!ocupacionVal) {
+            $(card, "err").textContent = "Debes seleccionar el nivel de ocupación.";
+            return;
+        }
+
+        const body = new URLSearchParams({
+            ocupacion: ocupacionVal,
+            parada: $(card, "sel-parada").value,
+            estado_fisico: $(card, "sel-estado-fisico").value,
+        });
+
+        const r = await fetch(`/alertas/api/micro/${card.dataset.id}/reportar/`, {
+            method: "POST", headers: {"X-CSRFToken": CSRF}, body,
+        });
+        const d = await r.json();
+        if (r.ok) { 
+            $(card, "ok").textContent = "¡Gracias por tu reporte!"; 
+            pintarEstado(card, d); 
+        } else { 
+            $(card, "err").textContent = d.error || "No se pudo enviar"; 
+        }
+    };
+});
+
+/* ---------- Chat de difusión ---------- */
+const chat = document.getElementById("chat");
+function linea(texto, clase, negrita) {
+    const p = document.createElement("p");
+    if (clase) p.className = clase;
+    if (negrita) { const b = document.createElement("b"); b.textContent = negrita + ": "; p.appendChild(b); }
+    p.appendChild(document.createTextNode(texto));
+    chat.appendChild(p); chat.scrollTop = chat.scrollHeight;
+}
+
+function agregarAlertaPanel(a) {
+    const sin = document.getElementById("sin-alertas"); if (sin) sin.remove();
+    const d = document.createElement("div"); d.className = "alerta " + a.severidad;
+    const s = document.createElement("strong"); s.textContent = "⚠ " + a.titulo; d.appendChild(s);
+    if (a.mensaje) { d.appendChild(document.createElement("br")); d.appendChild(document.createTextNode(a.mensaje)); }
+    document.getElementById("alertas").prepend(d);
+}
+
+const aliasInput = document.getElementById("alias");
+aliasInput.value = localStorage.getItem("alias") || "";
+
+let ws, intentos = 0;
+function conectar() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const alias = encodeURIComponent(aliasInput.value.trim());
+    ws = new WebSocket(`${proto}://${location.host}/ws/alertas/chat/${CATEGORIA}/?alias=${alias}`);
+    ws.onopen = () => { intentos = 0; };
+    ws.onmessage = (e) => {
+        const d = JSON.parse(e.data);
+        if (d.tipo === "historial") { chat.innerHTML = ""; d.mensajes.forEach(m => linea(m.texto, "", m.alias)); }
+        else if (d.tipo === "mensaje") linea(d.texto, "", d.alias);
+        else if (d.tipo === "alerta") {
+            linea(`ALERTA: ${d.titulo}${d.mensaje ? " – " + d.mensaje : ""}`, "al " + d.severidad);
+            agregarAlertaPanel(d);
+            document.querySelectorAll(".micro").forEach(cargarEstado);
+        }
+    };
+    ws.onclose = () => {
+        linea("Conexión perdida, reintentando…", "sys");
+        setTimeout(conectar, Math.min(10000, 1000 * ++intentos));
+    };
+}
+conectar();
+
+function enviar() {
+    const t = document.getElementById("texto");
+    if (!t.value.trim() || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({texto: t.value})); t.value = "";
+}
+document.getElementById("enviar").onclick = enviar;
+document.getElementById("texto").onkeydown = (e) => { if (e.key === "Enter") enviar(); };
+aliasInput.onchange = () => { localStorage.setItem("alias", aliasInput.value.trim()); if (ws) ws.close(); };
+</script>
+</body>
+</html>

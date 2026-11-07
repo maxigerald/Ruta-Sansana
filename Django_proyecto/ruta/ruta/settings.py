@@ -30,6 +30,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne', 
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'rutasansana',
+    'channels',  # App de WebSockets
+    'alertas',   # app de alertas y chat
 ]
 
 MIDDLEWARE = [
@@ -124,3 +127,5 @@ if os.name == 'nt':
     GDAL_LIBRARY_PATH = r'C:\OSGeo4W\bin\gdal313.dll'
     GEOS_LIBRARY_PATH = r'C:\OSGeo4W\bin\geos_c.dll'
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
+ASGI_APPLICATION = 'ruta.asgi.application'
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

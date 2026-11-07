@@ -1,6 +1,7 @@
 import os
 from django.conf import settings
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 
@@ -12,21 +13,24 @@ def mapa_micros(request):
     categoria_id = request.GET.get('categoria')
     micro_id = request.GET.get('micro')
     paradero_id = request.GET.get('paradero')
+    ver_todas = request.GET.get('todas')  # Parámetro para listar todas
 
     # 2. Consultas Base
     categorias = CategoriaRuta.objects.all()
     paraderos = Paradero.objects.all()
     
     # 3. Variables de estado
-    micros_filtradas = []
+    micros_filtradas = Micro.objects.none()
     micros_en_paradero = []
     micro_seleccionada = None
     paradero_seleccionado = None
     coords_recorrido = []
     estado_reportes = None
 
-    # 4. Lógica de Categorías
-    if categoria_id:
+    # 4. Lógica Principal de Filtrado (Categorías o Todas)
+    if ver_todas:
+        micros_filtradas = Micro.objects.all().order_by('numero')
+    elif categoria_id:
         micros_filtradas = Micro.objects.filter(categorias__id=categoria_id)
 
     # 5. Lógica de Paraderos
@@ -34,6 +38,15 @@ def mapa_micros(request):
         try:
             paradero_seleccionado = Paradero.objects.get(id=paradero_id)
             micros_en_paradero = paradero_seleccionado.micros.all()
+            
+            # Si estamos viendo "todas", mantenemos la lista de todas y no la reemplazamos por el paradero
+            if ver_todas:
+                pass
+            elif categoria_id:
+                micros_coincidentes = micros_filtradas.filter(paraderos=paradero_seleccionado)
+                micros_filtradas = micros_coincidentes if micros_coincidentes.exists() else micros_en_paradero
+            else:
+                micros_filtradas = micros_en_paradero
         except Paradero.DoesNotExist:
             pass
 
@@ -47,7 +60,7 @@ def mapa_micros(request):
         except Micro.DoesNotExist:
             pass
 
-    # 7. Lógica de Reportes en Tiempo Real (De tu compañera)
+    # 7. Lógica de Reportes en Tiempo Real
     if micro_seleccionada and paradero_seleccionado:
         tiempo_limite = timezone.now() - timedelta(minutes=5)
         reportes_activos = Reporte.objects.filter(
@@ -96,6 +109,17 @@ def mapa_micros(request):
         'micros_en_paradero': micros_en_paradero,
         'micro_seleccionada': micro_seleccionada,
         'estado_reportes': estado_reportes,
+        'ver_todas': ver_todas,  # Pasamos la variable a la plantilla
     }
     
     return render(request, 'rutasansana/maps.html', context)
+
+
+def api_detalle_micro(request, micro_id):
+    micro = get_object_or_404(Micro, pk=micro_id)
+    return JsonResponse({
+        "id": micro.id,
+        "numero": micro.numero,
+        "linea_nombre": micro.linea_nombre,
+        "color": micro.color,
+    })

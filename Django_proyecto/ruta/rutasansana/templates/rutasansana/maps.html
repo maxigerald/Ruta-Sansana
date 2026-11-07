@@ -7,26 +7,76 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { font-family: Arial, sans-serif; display: flex; margin: 0; height: 100vh; }
-        #sidebar { width: 340px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); box-sizing: border-box; }
-        #map { flex-grow: 1; height: 100%; }
-        .section-title { font-weight: bold; margin-top: 15px; color: #003366; font-size: 1.1em; border-bottom: 2px solid #003366; padding-bottom: 3px; }
-        ul { padding-left: 15px; margin-top: 5px; list-style: none; padding-left: 0; }
-        li { margin-bottom: 6px; }
+        #sidebar { width: 340px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); box-sizing: border-box; z-index: 1000; }
+        #map { flex-grow: 1; height: 100%; z-index: 1; }
+        .section-title { font-weight: bold; margin-top: 15px; color: #003366; font-size: 1.1em; border-bottom: 2px solid #003366; padding-bottom: 3px; margin-bottom: 10px; }
+        ul { padding-left: 18px; margin-top: 5px; margin-bottom: 15px; }
+        li { margin-bottom: 8px; font-size: 0.9em; }
         a { text-decoration: none; color: #0066cc; }
         a:hover { text-decoration: underline; color: #004080; }
-        .highlight { background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .alert-box { background: #ffebee; border: 1px solid #ffcdd2; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.9em; }
-        .normal-box { background: #e8f5e9; border: 1px solid #c8e6c9; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.9em; }
-        .btn-reporte { display: block; background: #dc2626; color: white; text-align: center; padding: 8px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 10px; font-size: 0.9em; }
-        .btn-reporte:hover { background: #b91c1c; color: white; text-decoration: none; }
+        
+        /* Insignia / Badge con el color de la micro */
+        .badge-micro {
+            display: inline-block;
+            color: white;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85em;
+            margin-right: 4px;
+        }
+        
+        /* Botón para ver todas */
+        .btn-ver-todas {
+            display: block; 
+            background: #e2e8f0; 
+            color: #1e293b; 
+            padding: 10px; 
+            text-align: center; 
+            border-radius: 5px; 
+            margin-bottom: 15px; 
+            font-weight: bold; 
+            text-decoration: none; 
+            border: 1px solid #cbd5e1;
+        }
+        .btn-ver-todas:hover {
+            background: #cbd5e1;
+            text-decoration: none;
+        }
+
+        /* Botón global flotante sobre el mapa */
+        .btn-flotante {
+            position: fixed; 
+            bottom: 25px; 
+            left: 360px; 
+            background-color: white; 
+            color: #990000; 
+            border: 3px solid #dc2626; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            text-decoration: none; 
+            z-index: 9999; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+            font-size: 16px;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .btn-flotante:hover {
+            transform: scale(1.05);
+            background-color: #fff5f5;
+            color: #990000;
+        }
     </style>
 </head>
 <body>
 
     <!-- Panel Lateral de Opciones -->
     <div id="sidebar">
-        <h2 style="color: #003366; font-size: 1.3em;">Ruta Sansana 🚌</h2>
+        <h2 style="color: #003366; font-size: 1.3em; margin-top: 0;">Ruta Sansana 🚌</h2>
         <p style="font-size: 0.85em; color: #666;">Monitoreo y recorridos en Valparaíso y Viña</p>
+        
+        <!-- BOTÓN VER TODAS LAS MICROS -->
+        <a href="?todas=true" class="btn-ver-todas">📋 Ver todas las micros</a>
         
         <!-- SECCIÓN 1: Categorías de Tramos -->
         <div class="section-title">Tramos Principales</div>
@@ -40,15 +90,25 @@
             {% endfor %}
         </ul>
 
-        <!-- SECCIÓN 2: Micros dinámicas según la categoría seleccionada -->
+        <!-- SECCIÓN 2: Micros dinámicas -->
         {% if micros_filtradas %}
-            <hr>
-            <div class="section-title">Micros en este tramo:</div>
+            <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
+            <div class="section-title">
+                {% if ver_todas %}
+                    Todas las micros registradas:
+                {% elif paradero_seleccionado %}
+                    Micros en este paradero:
+                {% else %}
+                    Micros en este tramo:
+                {% endif %}
+            </div>
             <ul>
                 {% for m in micros_filtradas %}
-                    <li style="background: {% if micro_seleccionada.id == m.id %}#e2e8f0{% else %}#fff{% endif %}; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
-                        <a href="?categoria={{ request.GET.categoria }}&micro={{ m.id }}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}" style="color: #1e293b; display: block; font-size: 0.9em;">
-                            <strong>Micro {{ m.numero }}</strong> - {{ m.linea_nombre }}
+                    <li>
+                        <!-- Mantiene el parámetro 'todas=true' y el paradero actual al hacer clic -->
+                        <a href="?{% if ver_todas %}todas=true&{% endif %}micro={{ m.id }}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}" style="color: #475569;">
+                            <span class="badge-micro" style="background-color: {{ m.color|default:'#dc2626' }};">Micro {{ m.numero }}</span>
+                            {{ m.linea_nombre }}
                         </a>
                     </li>
                 {% endfor %}
@@ -56,12 +116,12 @@
         {% endif %}
 
         <!-- SECCIÓN 3: Paraderos Disponibles -->
-        <hr>
+        <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
         <div class="section-title">Paraderos</div>
         <ul>
             {% for p in paraderos %}
-                <li style="background: {% if paradero_seleccionado.id == p.id %}#e2e8f0{% else %}#fff{% endif %}; padding: 4px; border-radius: 4px;">
-                    <a href="?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}">
+                <li style="background: {% if paradero_seleccionado.id == p.id %}#e2e8f0{% else %}transparent{% endif %}; padding: 3px 5px; border-radius: 4px;">
+                    <a href="?{% if ver_todas %}todas=true&{% endif %}{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}">
                         🚏 {{ p.nombre }}
                     </a>
                 </li>
@@ -70,40 +130,43 @@
             {% endfor %}
         </ul>
 
-        <!-- SECCIÓN 4: Información de la Micro y Reportes en Tiempo Real -->
+        <!-- SECCIÓN 4: Diseño limpio de reportes e información de la micro -->
         {% if micro_seleccionada %}
-            <div class="highlight">
-                <div style="background: #990000; color: white; padding: 8px; margin: -12px -12px 10px -12px; border-radius: 6px 6px 0 0;">
-                    <strong>Micro {{ micro_seleccionada.numero }}</strong>
-                </div>
-                <p style="font-size: 0.9em; margin: 4px 0;"><strong>Recorrido:</strong> {{ micro_seleccionada.linea_nombre }}</p>
+            <hr style="border: 0; border-top: 2px solid #cbd5e1; margin: 15px 0;">
+            
+            <div style="padding-top: 5px;">
+                <h3 style="color: {{ micro_seleccionada.color|default:'#d32f2f' }}; margin: 0 0 10px 0; font-size: 1.25em;">
+                    Micro {{ micro_seleccionada.numero }}
+                </h3>
+                
+                <p style="margin: 0 0 15px 0; font-size: 0.95em; color: #1e293b;">
+                    Recorrido: <strong>{{ micro_seleccionada.linea_nombre }}</strong>
+                </p>
 
-                {% if paradero_seleccionado %}
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;">
-                    <p style="font-size: 0.85em; margin: 4px 0;"><strong>Paradero seleccionado:</strong><br>{{ paradero_seleccionado.nombre }}</p>
-
-                    {% if estado_reportes.activo %}
-                        <div class="{% if estado_reportes.alerta != 'Normal' %}alert-box{% else %}normal-box{% endif %}">
-                            <p style="margin: 3px 0;"><strong>Estado en Tiempo Real:</strong></p>
-                            <p style="margin: 3px 0;">⏳ Tiempo estimado: <strong>~{{ estado_reportes.minutos }} min</strong></p>
-                            <p style="margin: 3px 0;">👥 Ocupación promedio: <strong>{{ estado_reportes.ocupacion }}/3</strong></p>
-                            <p style="margin: 3px 0;">⚠️ Alerta: {{ estado_reportes.alerta }}</p>
-                            {% if estado_reportes.incertidumbre %}
-                                <p style="color: #d9534f; font-size: 0.85em; margin: 3px 0;"><em>{{ estado_reportes.mensaje_incertidumbre }}</em></p>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <div class="normal-box">
-                            <p style="margin: 3px 0;">{{ estado_reportes.mensaje }}</p>
-                        </div>
+                {% if estado_reportes.activo %}
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>{{ estado_reportes.minutos }} mins</strong></p>
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong>{{ estado_reportes.ocupacion }} / 3</strong></p>
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: <strong>{{ estado_reportes.alerta }}</strong></p>
+                    
+                    {% if estado_reportes.incertidumbre %}
+                        <p style="margin: 6px 0; font-size: 0.9em; color: #d9534f; font-style: italic;">
+                            ⚠️ {{ estado_reportes.mensaje_incertidumbre }}
+                        </p>
                     {% endif %}
-
-                    <a href="#" class="btn-reporte">+ Enviar Reporte de Ocupación</a>
                 {% else %}
-                    <p style="font-size: 0.8em; color: #666; margin-top: 8px; font-style: italic;">
-                        Selecciona un paradero en el mapa para ver su estado en tiempo real.
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>mins</strong></p>
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong> / 3</strong></p>
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: </p>
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #d9534f; font-style: italic;">
+                        ⚠️ {{ estado_reportes.mensaje|default:"Selecciona un paradero para ver reportes." }}
                     </p>
                 {% endif %}
+                
+                <!-- BOTÓN DE REPORTE CONTEXTUAL AUTOMÁTICO -->
+                <a href="/alertas/?{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}{% endif %}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}" 
+                   style="display: block; background: #dc2626; color: white; text-align: center; padding: 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.95em; margin-top: 20px; transition: background 0.2s;">
+                    + Enviar Reporte de Ocupación
+                </a>
             </div>
         {% endif %}
     </div>
@@ -111,15 +174,18 @@
     <!-- Contenedor del Mapa -->
     <div id="map"></div>
 
+    <!-- BOTÓN GLOBAL FLOTANTE EN LA ESQUINA DEL MAPA -->
+    <a href="/alertas/" class="btn-flotante">
+        🚨 Zona de reportes
+    </a>
+
     <!-- JS de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. Inicializar mapa centrado en Valparaíso / Viña del Mar
         var map = L.map('map').setView([-33.036, -71.555], 12);
         
-var mapboxToken = '{{ mapbox_token }}';
+        var mapboxToken = '{{ mapbox_token }}';
 
-        // 2. Capa base de Mapbox
         L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
             tileSize: 512,
             zoomOffset: -1,
@@ -127,7 +193,6 @@ var mapboxToken = '{{ mapbox_token }}';
             attribution: '© Mapbox © OpenStreetMap'
         }).addTo(map);
 
-        // 3. Icono personalizado de paradero usando la carpeta estática local
         var iconoParadero = L.icon({
             iconUrl: '{% static "rutasansana/img/bus_pin.png" %}',
             iconSize: [32, 32],       
@@ -135,7 +200,6 @@ var mapboxToken = '{{ mapbox_token }}';
             popupAnchor: [0, -32]     
         });
 
-        // 4. Dibujar el recorrido de la micro seleccionada (desde Supabase)
         {% if micro_seleccionada and coords_recorrido %}
             var latlngs = [
                 {% for coord in coords_recorrido %}
@@ -143,21 +207,21 @@ var mapboxToken = '{{ mapbox_token }}';
                 {% endfor %}
             ];
 
-            var polyline = L.polyline(latlngs, {color: '#003366', weight: 5}).addTo(map);
+            var routeColor = '{{ micro_seleccionada.color|default:"#003366" }}';
+            var polyline = L.polyline(latlngs, {color: routeColor, weight: 6, opacity: 0.85}).addTo(map);
+            
             {% if not paradero_seleccionado %}
                 map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
             {% endif %}
         {% endif %}
 
-        // 5. Dibujar marcadores de paraderos en el mapa
         {% for p in paraderos %}
             {% if p.ubicacion %}
                 var marker = L.marker([{{ p.ubicacion.y }}, {{ p.ubicacion.x }}], {icon: iconoParadero}).addTo(map);
-                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
+                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if ver_todas %}todas=true&{% endif %}{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
             {% endif %}
         {% endfor %}
 
-        // 6. Hacer zoom automático cercano (Nivel 18) si hay un paradero seleccionado
         {% if paradero_seleccionado and paradero_seleccionado.ubicacion %}
             map.setView([{{ paradero_seleccionado.ubicacion.y }}, {{ paradero_seleccionado.ubicacion.x }}], 18);
         {% endif %}
