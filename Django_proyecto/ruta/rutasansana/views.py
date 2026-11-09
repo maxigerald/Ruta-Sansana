@@ -39,14 +39,11 @@ def mapa_micros(request):
             paradero_seleccionado = Paradero.objects.get(id=paradero_id)
             micros_en_paradero = paradero_seleccionado.micros.all()
             
-            # Si estamos viendo "todas", mantenemos la lista de todas y no la reemplazamos por el paradero
-            if ver_todas:
-                pass
-            elif categoria_id:
-                micros_coincidentes = micros_filtradas.filter(paraderos=paradero_seleccionado)
-                micros_filtradas = micros_coincidentes if micros_coincidentes.exists() else micros_en_paradero
-            else:
-                micros_filtradas = micros_en_paradero
+            # Al hacer clic en un paradero, filtramos exclusivamente sus micros
+            # y apagamos 'ver_todas' para que actúe igual que un tramo principal
+            micros_filtradas = micros_en_paradero
+            ver_todas = None 
+            
         except Paradero.DoesNotExist:
             pass
 
@@ -109,7 +106,7 @@ def mapa_micros(request):
         'micros_en_paradero': micros_en_paradero,
         'micro_seleccionada': micro_seleccionada,
         'estado_reportes': estado_reportes,
-        'ver_todas': ver_todas,  # Pasamos la variable a la plantilla
+        'ver_todas': ver_todas,
     }
     
     return render(request, 'rutasansana/maps.html', context)

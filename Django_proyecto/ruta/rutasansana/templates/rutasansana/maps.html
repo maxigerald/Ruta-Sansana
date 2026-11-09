@@ -10,38 +10,74 @@
         #sidebar { width: 340px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); box-sizing: border-box; z-index: 1000; }
         #map { flex-grow: 1; height: 100%; z-index: 1; }
         .section-title { font-weight: bold; margin-top: 15px; color: #003366; font-size: 1.1em; border-bottom: 2px solid #003366; padding-bottom: 3px; margin-bottom: 10px; }
-        ul { padding-left: 18px; margin-top: 5px; margin-bottom: 15px; }
-        li { margin-bottom: 8px; font-size: 0.9em; }
-        a { text-decoration: none; color: #0066cc; }
-        a:hover { text-decoration: underline; color: #004080; }
+        ul { padding-left: 18px; margin-top: 5px; margin-bottom: 15px; list-style-type: none; }
+        li { margin-bottom: 10px; font-size: 0.9em; }
+
+        /* ESTILOS GLOBALES DE ENLACES */
+        a { 
+            text-decoration: none !important; 
+            display: inline-flex;
+            align-items: center;
+            transition: transform 0.2s ease;
+        }
         
-        /* Insignia / Badge con el color de la micro */
+        a:hover { 
+            text-decoration: none !important; 
+            transform: scale(1.10); /* Agrandado pronunciado */
+            transform-origin: left center;
+        }
+
+        .link-standard {
+            color: #1e293b !important;
+        }
+        .link-standard:hover {
+            color: #1e293b !important;
+        }
+        
+        /* CORREGIDO: white-space: nowrap evita que el texto dentro del badge se rompa en dos líneas */
         .badge-micro {
             display: inline-block;
+            white-space: nowrap;
             color: white;
             padding: 3px 7px;
             border-radius: 4px;
             font-weight: bold;
             font-size: 0.85em;
-            margin-right: 4px;
+            margin-right: 6px;
+            flex-shrink: 0;
         }
-        
+
+        /* Insignia con el color del paradero */
+        .badge-paradero {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            width: 26px;
+            height: 24px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85em;
+            margin-right: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
         /* Botón para ver todas */
         .btn-ver-todas {
             display: block; 
             background: #e2e8f0; 
-            color: #1e293b; 
+            color: #1e293b !important; 
             padding: 10px; 
             text-align: center; 
             border-radius: 5px; 
             margin-bottom: 15px; 
             font-weight: bold; 
-            text-decoration: none; 
             border: 1px solid #cbd5e1;
         }
         .btn-ver-todas:hover {
             background: #cbd5e1;
-            text-decoration: none;
+            transform: scale(1.03);
         }
 
         /* Botón global flotante sobre el mapa */
@@ -50,12 +86,11 @@
             bottom: 25px; 
             left: 360px; 
             background-color: white; 
-            color: #990000; 
+            color: #990000 !important; 
             border: 3px solid #dc2626; 
             padding: 12px 24px; 
             border-radius: 8px; 
             font-weight: bold; 
-            text-decoration: none; 
             z-index: 9999; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
             font-size: 16px;
@@ -64,7 +99,6 @@
         .btn-flotante:hover {
             transform: scale(1.05);
             background-color: #fff5f5;
-            color: #990000;
         }
     </style>
 </head>
@@ -83,7 +117,7 @@
         <ul>
             {% for cat in categorias %}
                 <li>
-                    <a href="?categoria={{ cat.id }}">📍 {{ cat.nombre }}</a>
+                    <a href="?categoria={{ cat.id }}" class="link-standard">📍 {{ cat.nombre }}</a>
                 </li>
             {% empty %}
                 <li>No hay categorías registradas en el <a href="/admin/" target="_blank">Admin</a>.</li>
@@ -105,8 +139,7 @@
             <ul>
                 {% for m in micros_filtradas %}
                     <li>
-                        <!-- Mantiene el parámetro 'todas=true' y el paradero actual al hacer clic -->
-                        <a href="?{% if ver_todas %}todas=true&{% endif %}micro={{ m.id }}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}" style="color: #475569;">
+                        <a href="?{% if ver_todas %}todas=true&{% endif %}micro={{ m.id }}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}" class="link-standard">
                             <span class="badge-micro" style="background-color: {{ m.color|default:'#dc2626' }};">Micro {{ m.numero }}</span>
                             {{ m.linea_nombre }}
                         </a>
@@ -115,22 +148,25 @@
             </ul>
         {% endif %}
 
-        <!-- SECCIÓN 3: Paraderos Disponibles -->
+        <!-- SECCIÓN 3: Paraderos Disponibles con Colores en Ícono y Texto -->
         <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
         <div class="section-title">Paraderos</div>
         <ul>
             {% for p in paraderos %}
-                <li style="background: {% if paradero_seleccionado.id == p.id %}#e2e8f0{% else %}transparent{% endif %}; padding: 3px 5px; border-radius: 4px;">
-                    <a href="?{% if ver_todas %}todas=true&{% endif %}{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}">
-                        🚏 {{ p.nombre }}
+                {% with color_paradero=p.color|default:p.micros.first.color|default:'#0284c7' %}
+                <li style="background: {% if paradero_seleccionado.id == p.id %}#e2e8f0{% else %}transparent{% endif %}; padding: 4px 6px; border-radius: 4px;">
+                    <a href="?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}" style="color: {{ color_paradero }} !important; font-weight: bold;">
+                        <span class="badge-paradero" style="background-color: {{ color_paradero }};">🚏</span>
+                        {{ p.nombre }}
                     </a>
                 </li>
+                {% endwith %}
             {% empty %}
                 <li>No hay paraderos registrados.</li>
             {% endfor %}
         </ul>
 
-        <!-- SECCIÓN 4: Diseño limpio de reportes e información de la micro -->
+        <!-- SECCIÓN 4: Diseño de reportes e información de la micro -->
         {% if micro_seleccionada %}
             <hr style="border: 0; border-top: 2px solid #cbd5e1; margin: 15px 0;">
             
@@ -164,7 +200,7 @@
                 
                 <!-- BOTÓN DE REPORTE CONTEXTUAL AUTOMÁTICO -->
                 <a href="/alertas/?{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}{% endif %}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}" 
-                   style="display: block; background: #dc2626; color: white; text-align: center; padding: 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.95em; margin-top: 20px; transition: background 0.2s;">
+                   style="display: block; background: #dc2626; color: white !important; text-align: center; padding: 10px; border-radius: 4px; font-weight: bold; font-size: 0.95em; margin-top: 20px;">
                     + Enviar Reporte de Ocupación
                 </a>
             </div>
@@ -218,7 +254,7 @@
         {% for p in paraderos %}
             {% if p.ubicacion %}
                 var marker = L.marker([{{ p.ubicacion.y }}, {{ p.ubicacion.x }}], {icon: iconoParadero}).addTo(map);
-                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if ver_todas %}todas=true&{% endif %}{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
+                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
             {% endif %}
         {% endfor %}
 

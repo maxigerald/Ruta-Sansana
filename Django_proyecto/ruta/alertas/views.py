@@ -1,5 +1,5 @@
 from datetime import timedelta
-
+from django.core import serializers
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -12,12 +12,32 @@ from .services import alertas_activas, estado_micro, evaluar_no_para, serializar
 
 COOLDOWN_MIN = 3   # un mismo navegador solo puede reportar una micro cada 3 min
 
-
 @require_GET
 def indice(request):
+    micros_lista = [
+        {
+            "id": m.id, 
+            "numero": str(m.numero), 
+            "linea": m.linea_nombre,
+            "color": m.color if hasattr(m, 'color') and m.color else '#dc2626', # NUEVO: Color asignado
+            "categoria_id": m.categorias.first().id if m.categorias.exists() else 1
+        } 
+        for m in Micro.objects.all().order_by('numero')
+    ]
+    
+    paraderos_lista = [
+        {
+            "id": p.id, 
+            "nombre": p.nombre
+        } 
+        for p in Paradero.objects.all().order_by('nombre')
+    ]
+
     return render(request, "alertas/index.html", {
         "categorias": CategoriaRuta.objects.all(),
         "alertas": alertas_activas(),
+        "micros_json": micros_lista,
+        "paraderos_json": paraderos_lista,
     })
 
 

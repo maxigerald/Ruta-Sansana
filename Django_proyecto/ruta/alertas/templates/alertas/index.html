@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -14,23 +15,157 @@
         .info { background: #e0f2fe; border: 1px solid #bae6fd; }
         .warn { background: #fff7ed; border: 1px solid #fed7aa; }
         .crit { background: #ffebee; border: 1px solid #ffcdd2; }
+
+        /* Estilos del Buscador Inteligente */
+        .selector-tipo { display: flex; gap: 10px; margin: 15px 0; }
+        .btn-tipo {
+            flex: 1; padding: 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9;
+            border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; color: #475569; font-size: 0.9em;
+        }
+        .btn-tipo.active { background: #003366; color: white; border-color: #003366; }
+
+        .search-box { position: relative; margin-bottom: 20px; }
+        .search-input {
+            width: 100%; padding: 12px 15px; font-size: 1em; border: 2px solid #cbd5e1;
+            border-radius: 6px; box-sizing: border-box; outline: none; transition: border-color 0.2s; background: #fff;
+        }
+        .search-input:focus { border-color: #003366; }
+
+        .resultados-lista {
+            position: absolute; top: 100%; left: 0; right: 0; background: white;
+            border: 1px solid #cbd5e1; border-top: none; border-radius: 0 0 6px 6px;
+            max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .resultado-item {
+            padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.95em; color: #1e293b; transition: filter 0.2s;
+        }
+        .resultado-item:hover { filter: brightness(0.95); font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="wrap">
     <a href="/">← Volver al mapa</a>
-    <h1>Alertas y chats por tipo de micro 🚌</h1>
+    <h1>Alertas y chats 🚌</h1>
 
     {% for a in alertas %}
         <div class="alerta {{ a.severidad }}"><strong>⚠ {{ a.titulo }}</strong>{% if a.mensaje %}<br>{{ a.mensaje }}{% endif %}</div>
     {% endfor %}
 
-    <h3 style="color:#003366">Elige el tipo de micro que quieres tomar</h3>
+    <!-- BUSCADOR INTELIGENTE -->
+    <h3 style="color:#003366; margin-top: 25px;">Buscar micro o paradero</h3>
+    
+    <div class="selector-tipo">
+        <div id="btnMicro" class="btn-tipo active" onclick="seleccionarTipo('micro')">🚌 Una Micro</div>
+        <div id="btnParadero" class="btn-tipo" onclick="seleccionarTipo('paradero')">🚏 Un Paradero</div>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="inputBuscador" class="search-input" placeholder="Escribe el número de la micro (ej. 501)..." autocomplete="off" oninput="filtrarOpciones()">
+        <div id="listaResultados" class="resultados-lista" style="display: none;"></div>
+    </div>
+
+    <!-- CATEGORÍAS TRADICIONALES -->
+    <h3 style="color:#003366; margin-top: 30px;">O elige por tipo de recorrido</h3>
     {% for c in categorias %}
         <div class="card"><a href="{% url 'alertas:sala' c.id %}">💬 {{ c.nombre }}</a></div>
     {% empty %}
         <div class="card">No hay categorías registradas todavía.</div>
     {% endfor %}
 </div>
+
+<!-- Inyección limpia de datos en formato JSON nativo -->
+{{ micros_json|json_script:"micros-data" }}
+{{ paraderos_json|json_script:"paraderos-data" }}
+
+<script>
+    let tipoActual = 'micro';
+
+    const micros = JSON.parse(document.getElementById('micros-data').textContent);
+    const paraderos = JSON.parse(document.getElementById('paraderos-data').textContent);
+
+    // Función auxiliar para convertir color HEX a RGBA con opacidad ajustable
+    function hexToRgba(hex, alpha) {
+        let c = hex.replace('#', '');
+        if (c.length === 3) c = c.split('').map(x => x + x).join('');
+        const num = parseInt(c, 16);
+        return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+    }
+
+    function seleccionarTipo(tipo) {
+        tipoActual = tipo;
+        document.getElementById('btnMicro').classList.toggle('active', tipo === 'micro');
+        document.getElementById('btnParadero').classList.toggle('active', tipo === 'paradero');
+        
+        const input = document.getElementById('inputBuscador');
+        input.value = '';
+        input.placeholder = tipo === 'micro' ? "Escribe el número o recorrido de la micro (ej. 501)..." : "Escribe el nombre del paradero...";
+        document.getElementById('listaResultados').style.display = 'none';
+        input.focus();
+    }
+
+    function filtrarOpciones() {
+        const query = document.getElementById('inputBuscador').value.toLowerCase().trim();
+        const listaDiv = document.getElementById('listaResultados');
+        listaDiv.innerHTML = '';
+
+        if (query.length === 0) {
+            listaDiv.style.display = 'none';
+            return;
+        }
+
+        let resultados = [];
+
+        if (tipoActual === 'micro') {
+            resultados = micros.filter(m => 
+                m.numero.toLowerCase().includes(query) || 
+                m.linea.toLowerCase().includes(query)
+            );
+        } else {
+            resultados = paraderos.filter(p => 
+                p.nombre.toLowerCase().includes(query)
+            );
+        }
+
+        if (resultados.length > 0) {
+            listaDiv.style.display = 'block';
+            resultados.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'resultado-item';
+                
+                if (tipoActual === 'micro') {
+                    const colorMicro = item.color || '#dc2626';
+                    // Aplicamos un fondo semitransparente (opacidad 0.15) y un borde izquierdo con el color de la micro
+                    div.style.backgroundColor = hexToRgba(colorMicro, 0.15);
+                    div.style.borderLeft = `5px solid ${colorMicro}`;
+                    
+                    div.innerHTML = `<strong>Micro ${item.numero}</strong> - ${item.linea}`;
+                    div.onclick = () => {
+                        window.location.href = `/alertas/chat/${item.categoria_id}/#micro-${item.id}`;
+                    };
+                } else {
+                    div.innerHTML = `🚏 ${item.nombre}`;
+                    div.onclick = () => {
+                        window.location.href = `/?paradero=${item.id}`;
+                    };
+                }
+                listaDiv.appendChild(div);
+            });
+        } else {
+            const div = document.createElement('div');
+            div.className = 'resultado-item';
+            div.style.color = '#94a3b8';
+            div.style.cursor = 'default';
+            div.innerText = 'No se encontraron resultados';
+            listaDiv.appendChild(div);
+            listaDiv.style.display = 'block';
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-box')) {
+            document.getElementById('listaResultados').style.display = 'none';
+        }
+    });
+</script>
 </body>
 </html>
