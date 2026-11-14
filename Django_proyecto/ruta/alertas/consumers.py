@@ -1,6 +1,8 @@
 import time
+from datetime import timedelta
 from urllib.parse import parse_qs
 
+from django.utils import timezone
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from rutasansana.models import CategoriaRuta
@@ -60,9 +62,22 @@ class ChatCategoriaConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def _historial(self):
-        ultimos = MensajeChat.objects.filter(categoria_id=self.categoria_id).order_by("-creado")[:30]
-        return [{"alias": m.alias, "texto": m.texto} for m in reversed(list(ultimos))]
+        # 1. Borrar de la BD los mensajes más antiguos de 3 minutos para que no sigan ocupando espacio ni "resuciten"
+        hace_tres_minutos = timezone.now() - timedelta(minutes=3)
+        MensajeChat.objects.filter(categoria_id=self.categoria_id, creado__lt=hace_tres_minutos).delete()
+
+        # 2. Traer únicamente los mensajes vigentes dentro de la ventana de 3 minutos
+        ultimos = MensajeChat.objects.filter(
+            categoria_id=self.categoria_id,
+            creado__gte=hace_tres_minutos
+        ).order_by("creado")
+        
+        return [{"alias": m.alias, "texto": m.texto} for m in ultimos]
 
     @database_sync_to_async
     def _guardar(self, texto):
+        # Limpieza preventiva opcional al guardar
+        hace_tres_minutos = timezone.now() - timedelta(minutes=3)
+        MensajeChat.objects.filter(categoria_id=self.categoria_id, creado__lt=hace_tres_minutos).delete()
+        
         MensajeChat.objects.create(categoria_id=self.categoria_id, alias=self.alias, texto=texto)

@@ -81,7 +81,7 @@
     <div>
         <a href="/">← Mapa</a> · <a href="{% url 'alertas:indice' %}">Otros tipos</a>
         <h2>💬 Chat de {{ categoria.nombre }}</h2>
-        <div class="estado" style="font-size: 0.82em; margin-bottom: 8px;">Mensajes visibles para todos los que miran este tipo de micro.</div>
+        <div class="estado" style="font-size: 0.82em; margin-bottom: 8px;">Mensajes visibles por 3 minutos.</div>
     </div>
     
     <div id="chat"></div>
@@ -182,10 +182,8 @@ const microCards = document.querySelectorAll(".micro");
 
 microCards.forEach(card => {
     card.addEventListener("click", (e) => {
-        // Si ya está seleccionada esta misma tarjeta, no hacemos nada
         if (card.classList.contains("selected")) return;
 
-        // Limpiar formularios y quitar la clase 'selected' de TODAS las demás tarjetas
         microCards.forEach(c => {
             c.classList.remove("selected");
             if (c !== card) {
@@ -193,17 +191,14 @@ microCards.forEach(card => {
             }
         });
 
-        // Marcar únicamente la tarjeta actual
         card.classList.add("selected");
 
-        // Actualizar el hash de la URL sin recargar la página
         if (history.replaceState) {
             history.replaceState(null, null, `#${card.id}`);
         }
     });
 });
 
-// Al cargar la página, detectar la micro seleccionada por URL hash o parámetro
 window.addEventListener("DOMContentLoaded", () => {
     let targetCard = null;
     
@@ -211,7 +206,6 @@ window.addEventListener("DOMContentLoaded", () => {
         targetCard = document.querySelector(window.location.hash);
     }
     
-    // Si no hay hash, buscar si viene por parámetro GET (?micro=ID)
     if (!targetCard) {
         const urlParams = new URLSearchParams(window.location.search);
         const microIdParam = urlParams.get('micro');
@@ -291,15 +285,34 @@ microCards.forEach(card => {
     };
 });
 
-/* ---------- Chat de difusión ---------- */
+/* ---------- Chat de difusión con expiración a los 3 minutos ---------- */
 const chat = document.getElementById("chat");
+
 function linea(texto, clase, negrita) {
     const p = document.createElement("p");
+    // Guardamos el momento exacto en que se creó el mensaje (en milisegundos)
+    p.dataset.timestamp = Date.now();
+    
     if (clase) p.className = clase;
     if (negrita) { const b = document.createElement("b"); b.textContent = negrita + ": "; p.appendChild(b); }
     p.appendChild(document.createTextNode(texto));
-    chat.appendChild(p); chat.scrollTop = chat.scrollHeight;
+    chat.appendChild(p); 
+    chat.scrollTop = chat.scrollHeight;
 }
+
+// Limpiar mensajes que tengan más de 3 minutos (180,000 ms) cada 5 segundos
+setInterval(() => {
+    const ahora = Date.now();
+    const tiempoVida = 3 * 60 * 1000; // 3 minutos
+    const mensajes = chat.querySelectorAll("p");
+    
+    mensajes.forEach(p => {
+        const timestamp = parseInt(p.dataset.timestamp || 0);
+        if (timestamp && (ahora - timestamp > tiempoVida)) {
+            p.remove();
+        }
+    });
+}, 5000);
 
 function agregarAlertaPanel(a) {
     const sin = document.getElementById("sin-alertas"); if (sin) sin.remove();
