@@ -342,8 +342,26 @@
             var latlngs = polyline.getLatLngs();
             var minDist = Infinity;
             
-            for (var i = 0; i < latlngs.length; i++) {
-                var dist = userLatLng.distanceTo(latlngs[i]);
+            var flatLatLngs = [];
+            function flatten(arr) {
+                arr.forEach(function(item) {
+                    if (Array.isArray(item)) {
+                        flatten(item);
+                    } else if (item instanceof L.LatLng) {
+                        flatLatLngs.push(item);
+                    } else if (item && item.lat !== undefined && item.lng !== undefined) {
+                        flatLatLngs.push(L.latLng(item.lat, item.lng));
+                    }
+                });
+            }
+            flatten(latlngs);
+
+            if (flatLatLngs.length === 0) {
+                flatLatLngs = latlngs;
+            }
+
+            for (var i = 0; i < flatLatLngs.length; i++) {
+                var dist = userLatLng.distanceTo(flatLatLngs[i]);
                 if (dist < minDist) {
                     minDist = dist;
                 }
@@ -364,8 +382,9 @@
                     var initialLatLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
                     if (routePolyline) {
                         var distanciaInicial = distanciaMinimaARuta(initialLatLng, routePolyline);
-                        if (distanciaInicial > 250) {
-                            alert("⚠️ Estás muy lejos de la ruta de esta micro (" + Math.round(distanciaInicial) + " metros). Acércate al recorrido para activar.");
+                        // Límite estricto inicial: máximo 50 metros del trayecto
+                        if (distanciaInicial > 50) {
+                            alert("⚠️ Debes estar sobre el trayecto para compartir la ubicación (" + Math.round(distanciaInicial) + "m de distancia). Acércate a la ruta.");
                             return;
                         }
                     }
@@ -382,8 +401,9 @@
 
                             if (routePolyline) {
                                 var distanciaActual = distanciaMinimaARuta(userLatLng, routePolyline);
-                                if (distanciaActual > 150) {
-                                    alert("⚠️ Has salido de la ruta de esta micro (" + Math.round(distanciaActual) + "m). Se ha desactivado la ubicación compartida automáticamente.");
+                                // Límite estricto en movimiento: si te alejas más de 50 metros, se desactiva
+                                if (distanciaActual > 50) {
+                                    alert("⚠️ Has salido de la ruta (" + Math.round(distanciaActual) + "m). La ubicación compartida se ha desactivado automáticamente.");
                                     toggleCompartirUbicacionMicro();
                                     return;
                                 }
@@ -395,9 +415,9 @@
                                 simulatedMicroMarker = L.marker([uLat, uLon], {
                                     icon: L.divIcon({
                                         className: 'simulated-bus-pin',
-                                        html: '<div style="background-color: #dc2626; color: white; padding: 4px 8px; border-radius: 6px; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-size: 11px; white-space: nowrap;">🚌 Micro {{ micro_seleccionada.numero }} (En vivo)</div>',
-                                        iconSize: [100, 30],
-                                        iconAnchor: [50, 15]
+                                        html: '<div style="background-color: #dc2626; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-size: 11px; white-space: nowrap; text-align: center;">🚌 Micro {{ micro_seleccionada.numero }} (En vivo)</div>',
+                                        iconSize: [140, 30],
+                                        iconAnchor: [70, 15]
                                     })
                                 }).addTo(map).bindPopup("<b>Micro {{ micro_seleccionada.numero }}</b><br>Simulada mediante tu ubicación actual.");
                             }
