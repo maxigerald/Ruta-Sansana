@@ -104,6 +104,17 @@ def mapa_micros(request):
                 "incertidumbre": True
             }
 
+    # Serializar micros para el mapeo dinámico de categorías en el cliente si es necesario
+    micros_all = Micro.objects.all()
+    micros_json = []
+    for m in micros_all:
+        cat = m.categorias.first() if hasattr(m, 'categorias') else None
+        micros_json.append({
+            'id': m.id,
+            'numero': m.numero,
+            'categoria_id': cat.id if cat else 1
+        })
+
     # 8. Contexto final enviado a la plantilla
     context = {
         'categorias': categorias,
@@ -117,6 +128,7 @@ def mapa_micros(request):
         'micro_seleccionada': micro_seleccionada,
         'estado_reportes': estado_reportes,
         'ver_todas': ver_todas,
+        'micros_json': micros_json,
     }
     
     return render(request, 'rutasansana/maps.html', context)

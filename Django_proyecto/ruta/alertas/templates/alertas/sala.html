@@ -6,9 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ categoria.nombre }} - Alertas y chat</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; color: #1e293b; }
-        #izq { width: 380px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-sizing: border-box; box-shadow: 2px 0 5px rgba(0,0,0,.1); }
-        #der { flex: 1; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; min-width: 0; }
+        body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; color: #1e293b; overflow: hidden; }
+        
+        /* Panel Izquierdo: Chat (Dimensiones compactas) */
+        #izq { width: 380px; padding: 20px; background: #f8f9fa; display: flex; flex-direction: column; box-sizing: border-box; box-shadow: 2px 0 5px rgba(0,0,0,.1); height: 100vh; }
+        
+        /* Panel Derecho: Micros y Alertas (Área principal amplia) */
+        #der { flex: 1; padding: 20px; background: #fff; overflow-y: auto; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; gap: 15px; }
+
         h2 { color: #003366; font-size: 1.2em; margin: 8px 0; }
         a { color: #0066cc; text-decoration: none; } a:hover { text-decoration: underline; }
         .titulo { font-weight: bold; color: #003366; border-bottom: 2px solid #003366; padding-bottom: 3px; margin: 14px 0 8px; }
@@ -16,10 +21,23 @@
         .info { background: #e0f2fe; border: 1px solid #bae6fd; }
         .warn { background: #fff7ed; border: 1px solid #fed7aa; }
         .crit { background: #ffebee; border: 1px solid #ffcdd2; }
-        .micro { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-top: 12px; transition: border 0.3s, box-shadow 0.3s; }
         
-        /* Resalta la micro enfocada desde el mapa */
-        .micro:target { border: 2px solid #dc2626; box-shadow: 0 0 10px rgba(220, 38, 38, 0.4); }
+        /* Cuadrícula para distribuir las tarjetas de las micros manteniendo sus dimensiones */
+        .micros-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 15px;
+            align-items: start;
+        }
+
+        .micro { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; transition: all 0.3s ease; box-sizing: border-box; cursor: pointer; }
+        
+        /* Estado seleccionado estricto por clase JS (sin conflictos de :target) */
+        .micro.selected { 
+            border: 2px solid #dc2626 !important; 
+            box-shadow: 0 0 12px rgba(220, 38, 38, 0.4); 
+            background-color: #fffcfc;
+        }
 
         .micro header { background: #990000; color: #fff; margin: -12px -12px 10px; padding: 8px 12px; border-radius: 7px 7px 0 0; font-weight: bold; }
         .estado { font-size: .88em; margin: 4px 0; }
@@ -35,33 +53,52 @@
         select { background-color: #fff; cursor: pointer; }
 
         /* Colores de baja opacidad (RGBA) para las opciones de condición */
-        .opt-5 { background-color: rgba(34, 197, 94, 0.15); color: #15803d; font-weight: bold; } /* Excelente - Verde */
-        .opt-4 { background-color: rgba(132, 204, 22, 0.15); color: #4d7c0f; font-weight: bold; } /* Bueno - Verde Lima */
-        .opt-3 { background-color: rgba(234, 179, 8, 0.15); color: #a16207; font-weight: bold; }  /* Regular - Amarillo */
-        .opt-2 { background-color: rgba(249, 115, 22, 0.15); color: #c2410c; font-weight: bold; } /* Malo - Naranja */
-        .opt-1 { background-color: rgba(239, 68, 68, 0.15); color: #b91c1c; font-weight: bold; }  /* Pésimo - Rojo */
+        .opt-5 { background-color: rgba(34, 197, 94, 0.15); color: #15803d; font-weight: bold; }
+        .opt-4 { background-color: rgba(132, 204, 22, 0.15); color: #4d7c0f; font-weight: bold; }
+        .opt-3 { background-color: rgba(234, 179, 8, 0.15); color: #a16207; font-weight: bold; }
+        .opt-2 { background-color: rgba(249, 115, 22, 0.15); color: #c2410c; font-weight: bold; }
+        .opt-1 { background-color: rgba(239, 68, 68, 0.15); color: #b91c1c; font-weight: bold; }
 
         .btn { background: #dc2626; color: #fff; border: 0; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; padding: 8px; margin-top: 6px; }
         .btn:hover { background: #b91c1c; }
         .msg-ok { font-size: .82em; color: #166534; min-height: 1em; margin-top: 4px; font-weight: bold; }
         .msg-err { font-size: .82em; color: #b91c1c; min-height: 1em; margin-top: 4px; font-weight: bold; }
         
-        #chat { flex: 1; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #fff; }
+        #chat { flex: 1; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #fff; min-height: 200px; }
         #chat p { margin: 4px 0; font-size: .92em; word-wrap: break-word; }
         #chat .sys { color: #64748b; font-style: italic; }
         #chat .al { background: #fff7ed; border: 1px solid #fed7aa; padding: 6px; border-radius: 5px; }
         #chat .al.crit { background: #ffebee; border-color: #ffcdd2; }
-        #entrada { display: flex; gap: 6px; margin-top: 8px; }
-        #entrada input { flex: 1; }
-        @media (max-width: 760px) { body { flex-direction: column; height: auto; } #izq { width: 100%; } #chat { min-height: 300px; } }
+        #entrada { display: flex; gap: 6px; margin-top: 8px; flex-shrink: 0; }
+        #entrada input { flex: 1; min-width: 0; }
+        @media (max-width: 760px) { body { flex-direction: column; height: auto; overflow: auto; } #izq, #der { width: 100%; height: auto; } }
     </style>
 </head>
 <body>
-<div id="izq">
-    <a href="/">← Mapa</a> · <a href="{% url 'alertas:indice' %}">Otros tipos</a>
-    <h2>{{ categoria.nombre }}</h2>
 
-    <div class="titulo">Alertas vigentes</div>
+<!-- PANEL IZQUIERDO: Chat (Dimensiones compactas) -->
+<div id="izq">
+    <div>
+        <a href="/">← Mapa</a> · <a href="{% url 'alertas:indice' %}">Otros tipos</a>
+        <h2>💬 Chat de {{ categoria.nombre }}</h2>
+        <div class="estado" style="font-size: 0.82em; margin-bottom: 8px;">Mensajes visibles para todos los que miran este tipo de micro.</div>
+    </div>
+    
+    <div id="chat"></div>
+    
+    <div id="entrada">
+        <input id="alias" placeholder="Tu alias (*)" maxlength="20" style="width:90px">
+        <input id="texto" placeholder="Escribe un mensaje…" maxlength="300" autocomplete="off">
+        <button class="btn" id="enviar" style="width:auto; margin-top:0;">Enviar</button>
+    </div>
+</div>
+
+<!-- PANEL DERECHO: Micros y Alertas (Área ancha, con tarjetas organizadas) -->
+<div id="der">
+    <div>
+        <h2>{{ categoria.nombre }}</h2>
+        <div class="titulo" style="margin-top: 5px;">Alertas vigentes</div>
+    </div>
     <div id="alertas">
         {% for a in alertas %}
             <div class="alerta {{ a.severidad }}"><strong>⚠ {{ a.titulo }}</strong>{% if a.mensaje %}<br>{{ a.mensaje }}{% endif %}</div>
@@ -71,68 +108,59 @@
     </div>
 
     <div class="titulo">Estado de las micros</div>
-    {% for m in micros %}
-        <div class="micro" id="micro-{{ m.id }}" data-id="{{ m.id }}">
-            <header>Micro {{ m.numero }} · {{ m.linea_nombre }}</header>
-            <div class="estado" data-campo="ocupacion">Cargando…</div>
-            <div class="estado" data-campo="parada"></div>
-            <div class="estado" data-campo="estado_fisico"></div>
-            <div class="poco" data-campo="poco"></div>
+    <div class="micros-grid">
+        {% for m in micros %}
+            <div class="micro" id="micro-{{ m.id }}" data-id="{{ m.id }}">
+                <header>Micro {{ m.numero }} · {{ m.linea_nombre }}</header>
+                <div class="estado" data-campo="ocupacion">Cargando…</div>
+                <div class="estado" data-campo="parada"></div>
+                <div class="estado" data-campo="estado_fisico"></div>
+                <div class="poco" data-campo="poco"></div>
 
-            <div class="form-grid">
-                <div class="campo-grupo">
-                    <span class="campo-label">Ocupación (*)</span>
-                    <select data-campo="sel-ocupacion">
-                        <option value="">-- Seleccionar --</option>
-                        <option value="1">Vacía</option>
-                        <option value="2">Media</option>
-                        <option value="3">Llena</option>
-                    </select>
+                <div class="form-grid">
+                    <div class="campo-grupo">
+                        <span class="campo-label">Ocupación (*)</span>
+                        <select data-campo="sel-ocupacion">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="1">Vacía</option>
+                            <option value="2">Media</option>
+                            <option value="3">Llena</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-grupo">
+                        <span class="campo-label">¿Paró? (opcional)</span>
+                        <select data-campo="sel-parada">
+                            <option value="sin_dato">Sin dato</option>
+                            <option value="paro">Paró</option>
+                            <option value="no_paro">No paró</option>
+                        </select>
+                    </div>
+
+                    <div class="campo-grupo">
+                        <span class="campo-label">
+                            <img src="{% static 'rutasansana/img/estrella_estado_micro.png' %}" alt="Estrella" class="star-icon">
+                            Condición física (opcional)
+                        </span>
+                        <select data-campo="sel-estado-fisico">
+                            <option value="0">Sin dato</option>
+                            <option value="5" class="opt-5">Excelente (5 ★)</option>
+                            <option value="4" class="opt-4">Bueno (4 ★)</option>
+                            <option value="3" class="opt-3">Regular (3 ★)</option>
+                            <option value="2" class="opt-2">Malo (2 ★)</option>
+                            <option value="1" class="opt-1">Pésimo (1 ★)</option>
+                        </select>
+                    </div>
+
+                    <button class="btn" data-campo="enviar">Enviar reporte</button>
                 </div>
 
-                <div class="campo-grupo">
-                    <span class="campo-label">¿Paró? (opcional)</span>
-                    <select data-campo="sel-parada">
-                        <option value="sin_dato">Sin dato</option>
-                        <option value="paro">Paró</option>
-                        <option value="no_paro">No paró</option>
-                    </select>
-                </div>
-
-                <div class="campo-grupo">
-                    <span class="campo-label">
-                        <img src="{% static 'rutasansana/img/estrella_estado_micro.png' %}" alt="Estrella" class="star-icon">
-                        Condición física (opcional)
-                    </span>
-                    <select data-campo="sel-estado-fisico">
-                        <option value="0">Sin dato</option>
-                        <option value="5" class="opt-5">Excelente (5 ★)</option>
-                        <option value="4" class="opt-4">Bueno (4 ★)</option>
-                        <option value="3" class="opt-3">Regular (3 ★)</option>
-                        <option value="2" class="opt-2">Malo (2 ★)</option>
-                        <option value="1" class="opt-1">Pésimo (1 ★)</option>
-                    </select>
-                </div>
-
-                <button class="btn" data-campo="enviar">Enviar reporte</button>
+                <div class="msg-ok" data-campo="ok"></div>
+                <div class="msg-err" data-campo="err"></div>
             </div>
-
-            <div class="msg-ok" data-campo="ok"></div>
-            <div class="msg-err" data-campo="err"></div>
-        </div>
-    {% empty %}
-        <div class="estado">Este tipo aún no tiene micros asignadas.</div>
-    {% endfor %}
-</div>
-
-<div id="der">
-    <h2>💬 Chat de {{ categoria.nombre }}</h2>
-    <div class="estado">Mensajes visibles para todos los que miran este tipo de micro.</div>
-    <div id="chat"></div>
-    <div id="entrada">
-        <input id="alias" placeholder="Tu alias (*)" maxlength="20" style="width:110px">
-        <input id="texto" placeholder="Escribe un mensaje…" maxlength="300" autocomplete="off">
-        <button class="btn" id="enviar" style="width:auto; margin-top:0;">Enviar</button>
+        {% empty %}
+            <div class="estado">Este tipo aún no tiene micros asignadas.</div>
+        {% endfor %}
     </div>
 </div>
 
@@ -140,6 +168,64 @@
 const CSRF = "{{ csrf_token }}";
 const CATEGORIA = {{ categoria.id }};
 const $ = (root, campo) => root.querySelector(`[data-campo="${campo}"]`);
+
+/* ---------- Gestión estricta de selección única y limpieza de formularios ---------- */
+function limpiarFormularioMicro(card) {
+    $(card, "sel-ocupacion").value = "";
+    $(card, "sel-parada").value = "sin_dato";
+    $(card, "sel-estado-fisico").value = "0";
+    $(card, "ok").textContent = "";
+    $(card, "err").textContent = "";
+}
+
+const microCards = document.querySelectorAll(".micro");
+
+microCards.forEach(card => {
+    card.addEventListener("click", (e) => {
+        // Si ya está seleccionada esta misma tarjeta, no hacemos nada
+        if (card.classList.contains("selected")) return;
+
+        // Limpiar formularios y quitar la clase 'selected' de TODAS las demás tarjetas
+        microCards.forEach(c => {
+            c.classList.remove("selected");
+            if (c !== card) {
+                limpiarFormularioMicro(c);
+            }
+        });
+
+        // Marcar únicamente la tarjeta actual
+        card.classList.add("selected");
+
+        // Actualizar el hash de la URL sin recargar la página
+        if (history.replaceState) {
+            history.replaceState(null, null, `#${card.id}`);
+        }
+    });
+});
+
+// Al cargar la página, detectar la micro seleccionada por URL hash o parámetro
+window.addEventListener("DOMContentLoaded", () => {
+    let targetCard = null;
+    
+    if (window.location.hash) {
+        targetCard = document.querySelector(window.location.hash);
+    }
+    
+    // Si no hay hash, buscar si viene por parámetro GET (?micro=ID)
+    if (!targetCard) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const microIdParam = urlParams.get('micro');
+        if (microIdParam) {
+            targetCard = document.getElementById(`micro-${microIdParam}`);
+        }
+    }
+
+    if (targetCard) {
+        microCards.forEach(c => c.classList.remove("selected"));
+        targetCard.classList.add("selected");
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+});
 
 /* ---------- Estado y reportes ---------- */
 function pintarEstado(card, e) {
@@ -164,17 +250,18 @@ async function cargarEstado(card) {
     } catch (_) { $(card, "ocupacion").textContent = "No se pudo cargar el estado"; }
 }
 
-document.querySelectorAll(".micro").forEach(card => {
+microCards.forEach(card => {
     cargarEstado(card);
     setInterval(() => cargarEstado(card), 20000);
     
-    $(card, "enviar").onclick = async () => {
+    $(card, "enviar").onclick = async (e) => {
+        e.stopPropagation(); 
         $(card, "ok").textContent = ""; 
         $(card, "err").textContent = "";
         
         const aliasVal = document.getElementById("alias").value.trim();
         if (!aliasVal) {
-            $(card, "err").textContent = "Por favor, ingresa tu alias en el panel derecho antes de reportar.";
+            $(card, "err").textContent = "Por favor, ingresa tu alias en el panel izquierdo antes de reportar.";
             document.getElementById("alias").focus();
             return;
         }

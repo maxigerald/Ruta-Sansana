@@ -7,10 +7,42 @@
     <title>Alertas y chats - Ruta Sansana</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 24px; color: #1e293b; }
-        .wrap { max-width: 640px; margin: 0 auto; }
-        h1 { color: #003366; font-size: 1.4em; }
+        
+        /* Layout de dos columnas intercambiadas */
+        .page-container {
+            display: flex;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Panel Izquierdo (Antes principal, ahora dimensiones de barra lateral) */
+        .sidebar-left {
+            width: 320px;
+            flex-shrink: 0;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 20px;
+            box-sizing: border-box;
+            height: fit-content;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* Panel Derecho (Antes barra lateral, ahora dimensiones de contenedor principal ancho) */
+        .main-right {
+            flex-grow: 1;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        h1 { color: #003366; font-size: 1.4em; margin-top: 0; }
         a { color: #0066cc; text-decoration: none; } a:hover { text-decoration: underline; }
-        .card { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-top: 10px; }
+        .card { background: #f8f9fa; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-top: 10px; }
         .alerta { padding: 10px; border-radius: 5px; margin-top: 8px; font-size: .9em; }
         .info { background: #e0f2fe; border: 1px solid #bae6fd; }
         .warn { background: #fff7ed; border: 1px solid #fed7aa; }
@@ -43,34 +75,40 @@
     </style>
 </head>
 <body>
-<div class="wrap">
-    <a href="/">← Volver al mapa</a>
-    <h1>Alertas y chats 🚌</h1>
 
-    {% for a in alertas %}
-        <div class="alerta {{ a.severidad }}"><strong>⚠ {{ a.titulo }}</strong>{% if a.mensaje %}<br>{{ a.mensaje }}{% endif %}</div>
-    {% endfor %}
-
-    <!-- BUSCADOR INTELIGENTE -->
-    <h3 style="color:#003366; margin-top: 25px;">Buscar micro o paradero</h3>
-    
-    <div class="selector-tipo">
-        <div id="btnMicro" class="btn-tipo active" onclick="seleccionarTipo('micro')">🚌 Una Micro</div>
-        <div id="btnParadero" class="btn-tipo" onclick="seleccionarTipo('paradero')">🚏 Un Paradero</div>
+<div class="page-container">
+    <!-- PANEL IZQUIERDO (Categorías / Chats con dimensiones compactas) -->
+    <div class="sidebar-left">
+        <h3 style="color:#003366; margin-top: 0; font-size: 1.1em; border-bottom: 2px solid #003366; padding-bottom: 6px;">Chats de Recorridos</h3>
+        {% for c in categorias %}
+            <div class="card"><a href="{% url 'alertas:sala' c.id %}">💬 {{ c.nombre }}</a></div>
+        {% empty %}
+            <div class="card">No hay categorías registradas todavía.</div>
+        {% endfor %}
     </div>
 
-    <div class="search-box">
-        <input type="text" id="inputBuscador" class="search-input" placeholder="Escribe el número de la micro (ej. 501)..." autocomplete="off" oninput="filtrarOpciones()">
-        <div id="listaResultados" class="resultados-lista" style="display: none;"></div>
-    </div>
+    <!-- PANEL DERECHO (Contenido principal ancho: Buscador y Alertas) -->
+    <div class="main-right">
+        <a href="/">← Volver al mapa</a>
+        <h1>Alertas y chats 🚌</h1>
 
-    <!-- CATEGORÍAS TRADICIONALES -->
-    <h3 style="color:#003366; margin-top: 30px;">O elige por tipo de recorrido</h3>
-    {% for c in categorias %}
-        <div class="card"><a href="{% url 'alertas:sala' c.id %}">💬 {{ c.nombre }}</a></div>
-    {% empty %}
-        <div class="card">No hay categorías registradas todavía.</div>
-    {% endfor %}
+        {% for a in alertas %}
+            <div class="alerta {{ a.severidad }}"><strong>⚠ {{ a.titulo }}</strong>{% if a.mensaje %}<br>{{ a.mensaje }}{% endif %}</div>
+        {% endfor %}
+
+        <!-- BUSCADOR INTELIGENTE -->
+        <h3 style="color:#003366; margin-top: 25px;">Buscar micro o paradero</h3>
+        
+        <div class="selector-tipo">
+            <div id="btnMicro" class="btn-tipo active" onclick="seleccionarTipo('micro')">🚌 Una Micro</div>
+            <div id="btnParadero" class="btn-tipo" onclick="seleccionarTipo('paradero')">🚏 Un Paradero</div>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="inputBuscador" class="search-input" placeholder="Escribe el número de la micro (ej. 501)..." autocomplete="off" oninput="filtrarOpciones()">
+            <div id="listaResultados" class="resultados-lista" style="display: none;"></div>
+        </div>
+    </div>
 </div>
 
 <!-- Inyección limpia de datos en formato JSON nativo -->
@@ -83,7 +121,6 @@
     const micros = JSON.parse(document.getElementById('micros-data').textContent);
     const paraderos = JSON.parse(document.getElementById('paraderos-data').textContent);
 
-    // Función auxiliar para convertir color HEX a RGBA con opacidad ajustable
     function hexToRgba(hex, alpha) {
         let c = hex.replace('#', '');
         if (c.length === 3) c = c.split('').map(x => x + x).join('');
@@ -134,7 +171,6 @@
                 
                 if (tipoActual === 'micro') {
                     const colorMicro = item.color || '#dc2626';
-                    // Aplicamos un fondo semitransparente (opacidad 0.15) y un borde izquierdo con el color de la micro
                     div.style.backgroundColor = hexToRgba(colorMicro, 0.15);
                     div.style.borderLeft = `5px solid ${colorMicro}`;
                     

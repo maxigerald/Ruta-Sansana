@@ -229,10 +229,12 @@
                     </p>
                 {% endif %}
                 
-                <a href="/alertas/?{% if micro_seleccionada and micro_seleccionada.id %}micro={{ micro_seleccionada.id }}{% endif %}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}" 
+                {% with cat=micro_seleccionada.categorias.first %}
+                <a id="btnReporteOcupacion" href="{% if cat %}{% url 'alertas:sala' cat.id %}#micro-{{ micro_seleccionada.id }}{% else %}/alertas/{% endif %}" 
                    style="display: block; background: #dc2626; color: white !important; text-align: center; padding: 10px; border-radius: 4px; font-weight: bold; font-size: 0.95em; margin-top: 20px;">
                     + Enviar Reporte de Ocupación
                 </a>
+                {% endwith %}
             </div>
         {% endif %}
     </div>
