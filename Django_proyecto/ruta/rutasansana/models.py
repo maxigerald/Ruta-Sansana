@@ -19,6 +19,14 @@ class Paradero(models.Model):
     def __str__(self):
         return self.nombre
 
+    @property
+    def color_micro(self):
+        """Devuelve el color de la primera micro asociada o un color por defecto si no tiene."""
+        primera_micro = self.micros.first()
+        if primera_micro and primera_micro.color:
+            return primera_micro.color
+        return '#0284c7'  # Color celeste por defecto si no hay micro
+
 
 class Micro(models.Model):
     numero = models.IntegerField()

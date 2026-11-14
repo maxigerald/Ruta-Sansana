@@ -23,7 +23,7 @@
         
         a:hover { 
             text-decoration: none !important; 
-            transform: scale(1.10); /* Agrandado pronunciado */
+            transform: scale(1.10);
             transform-origin: left center;
         }
 
@@ -34,7 +34,6 @@
             color: #1e293b !important;
         }
         
-        /* CORREGIDO: white-space: nowrap evita que el texto dentro del badge se rompa en dos líneas */
         .badge-micro {
             display: inline-block;
             white-space: nowrap;
@@ -47,7 +46,6 @@
             flex-shrink: 0;
         }
 
-        /* Insignia con el color del paradero */
         .badge-paradero {
             display: inline-flex;
             align-items: center;
@@ -63,7 +61,6 @@
             flex-shrink: 0;
         }
 
-        /* Botón para ver todas */
         .btn-ver-todas {
             display: block; 
             background: #e2e8f0; 
@@ -80,7 +77,6 @@
             transform: scale(1.03);
         }
 
-        /* Botón global flotante sobre el mapa */
         .btn-flotante {
             position: fixed; 
             bottom: 25px; 
@@ -100,19 +96,48 @@
             transform: scale(1.05);
             background-color: #fff5f5;
         }
+
+        /* 🚌 BOTÓN DE COMPARTIR UBICACIÓN DE LA MICRO (AZUL OSCURO) */
+        .btn-compartir-micro {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #1e3a8a;
+            color: white !important;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 9999;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            border: none;
+            text-align: center;
+            font-size: 14px;
+            transition: background-color 0.2s, transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .btn-compartir-micro:hover {
+            transform: scale(1.02);
+            background-color: #1e40af;
+        }
+        .btn-compartir-micro span {
+            font-size: 0.75em;
+            font-weight: normal;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Panel Lateral de Opciones -->
     <div id="sidebar">
         <h2 style="color: #003366; font-size: 1.3em; margin-top: 0;">Ruta Sansana 🚌</h2>
         <p style="font-size: 0.85em; color: #666;">Monitoreo y recorridos en Valparaíso y Viña</p>
         
-        <!-- BOTÓN VER TODAS LAS MICROS -->
         <a href="?todas=true" class="btn-ver-todas">📋 Ver todas las micros</a>
         
-        <!-- SECCIÓN 1: Categorías de Tramos -->
         <div class="section-title">Tramos Principales</div>
         <ul>
             {% for cat in categorias %}
@@ -124,7 +149,6 @@
             {% endfor %}
         </ul>
 
-        <!-- SECCIÓN 2: Micros dinámicas -->
         {% if micros_filtradas %}
             <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
             <div class="section-title">
@@ -148,38 +172,35 @@
             </ul>
         {% endif %}
 
-        <!-- SECCIÓN 3: Paraderos Disponibles con Colores en Ícono y Texto -->
+        <!-- SECCIÓN 3: Paraderos Disponibles con Colores Dinámicos -->
         <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
         <div class="section-title">Paraderos</div>
         <ul>
             {% for p in paraderos %}
-                {% with color_paradero=p.color|default:p.micros.first.color|default:'#0284c7' %}
-                <li style="background: {% if paradero_seleccionado.id == p.id %}#e2e8f0{% else %}transparent{% endif %}; padding: 4px 6px; border-radius: 4px;">
-                    <a href="?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}" style="color: {{ color_paradero }} !important; font-weight: bold;">
-                        <span class="badge-paradero" style="background-color: {{ color_paradero }};">🚏</span>
+                <li style="background: {% if paradero_seleccionado and paradero_seleccionado.id == p.id %}#e2e8f0{% else %}transparent{% endif %}; padding: 4px 6px; border-radius: 4px;">
+                    <a href="?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada and micro_seleccionada.id %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}" style="color: {{ p.color_micro }} !important; font-weight: bold;">
+                        <span class="badge-paradero" style="background-color: {{ p.color_micro }};">🚏</span>
                         {{ p.nombre }}
                     </a>
                 </li>
-                {% endwith %}
             {% empty %}
                 <li>No hay paraderos registrados.</li>
             {% endfor %}
         </ul>
 
-        <!-- SECCIÓN 4: Diseño de reportes e información de la micro -->
         {% if micro_seleccionada %}
             <hr style="border: 0; border-top: 2px solid #cbd5e1; margin: 15px 0;">
             
             <div style="padding-top: 5px;">
                 <h3 style="color: {{ micro_seleccionada.color|default:'#d32f2f' }}; margin: 0 0 10px 0; font-size: 1.25em;">
-                    Micro {{ micro_seleccionada.numero }}
+                    Micro {{ micro_seleccionada.numero|default:"--" }}
                 </h3>
                 
                 <p style="margin: 0 0 15px 0; font-size: 0.95em; color: #1e293b;">
-                    Recorrido: <strong>{{ micro_seleccionada.linea_nombre }}</strong>
+                    Recorrido: <strong>{{ micro_seleccionada.linea_nombre|default:"General" }}</strong>
                 </p>
 
-                {% if estado_reportes.activo %}
+                {% if estado_reportes and estado_reportes.activo %}
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>{{ estado_reportes.minutos }} mins</strong></p>
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong>{{ estado_reportes.ocupacion }} / 3</strong></p>
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: <strong>{{ estado_reportes.alerta }}</strong></p>
@@ -190,16 +211,15 @@
                         </p>
                     {% endif %}
                 {% else %}
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>mins</strong></p>
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong> / 3</strong></p>
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: </p>
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>-- mins</strong></p>
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong>-- / 3</strong></p>
+                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: --</p>
                     <p style="margin: 6px 0; font-size: 0.9em; color: #d9534f; font-style: italic;">
                         ⚠️ {{ estado_reportes.mensaje|default:"Selecciona un paradero para ver reportes." }}
                     </p>
                 {% endif %}
                 
-                <!-- BOTÓN DE REPORTE CONTEXTUAL AUTOMÁTICO -->
-                <a href="/alertas/?{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}{% endif %}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}" 
+                <a href="/alertas/?{% if micro_seleccionada and micro_seleccionada.id %}micro={{ micro_seleccionada.id }}{% endif %}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}" 
                    style="display: block; background: #dc2626; color: white !important; text-align: center; padding: 10px; border-radius: 4px; font-weight: bold; font-size: 0.95em; margin-top: 20px;">
                     + Enviar Reporte de Ocupación
                 </a>
@@ -214,6 +234,14 @@
     <a href="/alertas/" class="btn-flotante">
         🚨 Zona de reportes
     </a>
+
+    <!-- 🚌 BOTÓN SUPERIOR DERECHA: COMPARTIR UBICACIÓN DE LA MICRO -->
+    {% if micro_seleccionada and micro_seleccionada.id %}
+    <button id="btnCompartirMicro" class="btn-compartir-micro" onclick="toggleCompartirUbicacionMicro()">
+        Estoy en la micro
+        <span>(comparte tu ubicación para ayudar a saber la ubicación de la micro)</span>
+    </button>
+    {% endif %}
 
     <!-- JS de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -236,31 +264,157 @@
             popupAnchor: [0, -32]     
         });
 
-        {% if micro_seleccionada and coords_recorrido %}
-            var latlngs = [
+        var routeLatLngs = [
+            {% if micro_seleccionada and coords_recorrido %}
                 {% for coord in coords_recorrido %}
                     [{{ coord.1 }}, {{ coord.0 }}],
                 {% endfor %}
-            ];
+            {% endif %}
+        ];
 
+        var routePolyline = null;
+        {% if micro_seleccionada and coords_recorrido %}
             var routeColor = '{{ micro_seleccionada.color|default:"#003366" }}';
-            var polyline = L.polyline(latlngs, {color: routeColor, weight: 6, opacity: 0.85}).addTo(map);
+            routePolyline = L.polyline(routeLatLngs, {color: routeColor, weight: 6, opacity: 0.85}).addTo(map);
             
             {% if not paradero_seleccionado %}
-                map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
+                map.fitBounds(routePolyline.getBounds(), {padding: [50, 50]});
             {% endif %}
         {% endif %}
 
         {% for p in paraderos %}
             {% if p.ubicacion %}
                 var marker = L.marker([{{ p.ubicacion.y }}, {{ p.ubicacion.x }}], {icon: iconoParadero}).addTo(map);
-                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
+                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada and micro_seleccionada.id %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
             {% endif %}
         {% endfor %}
 
         {% if paradero_seleccionado and paradero_seleccionado.ubicacion %}
             map.setView([{{ paradero_seleccionado.ubicacion.y }}, {{ paradero_seleccionado.ubicacion.x }}], 18);
         {% endif %}
+
+        // 📍 GEOLOCALIZACIÓN GENERAL DEL USUARIO
+        if ("geolocation" in navigator) {
+            navigator.geolocation.watchPosition(
+                function(position) {
+                    var userLat = position.coords.latitude;
+                    var userLon = position.coords.longitude;
+
+                    if (window.userMarker) {
+                        window.userMarker.setLatLng([userLat, userLon]);
+                    } else {
+                        window.userMarker = L.marker([userLat, userLon], {
+                            icon: L.divIcon({
+                                className: 'user-location-pin',
+                                html: '<div style="background-color: #2563eb; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.4);"></div>',
+                                iconSize: [16, 16]
+                            })
+                        }).addTo(map).bindPopup("<b>📍 ¡Estás aquí!</b>");
+                    }
+                },
+                function(error) {
+                    console.warn("No se pudo obtener la geolocalización: ", error.message);
+                },
+                { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+            );
+        }
+
+        // 🚌 LÓGICA DE SIMULACIÓN Y CONTROL DE RUTA DE LA MICRO
+        var sharingMicroLocation = false;
+        var microWatchId = null;
+        var simulatedMicroMarker = null;
+
+        function distanciaMinimaARuta(userLatLng, polyline) {
+            if (!polyline) return 0;
+            var latlngs = polyline.getLatLngs();
+            var minDist = Infinity;
+            
+            for (var i = 0; i < latlngs.length; i++) {
+                var dist = userLatLng.distanceTo(latlngs[i]);
+                if (dist < minDist) {
+                    minDist = dist;
+                }
+            }
+            return minDist;
+        }
+
+        function toggleCompartirUbicacionMicro() {
+            var btn = document.getElementById('btnCompartirMicro');
+
+            if (!sharingMicroLocation) {
+                if (!navigator.geolocation) {
+                    alert("Tu navegador no soporta geolocalización.");
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    var initialLatLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                    if (routePolyline) {
+                        var distanciaInicial = distanciaMinimaARuta(initialLatLng, routePolyline);
+                        if (distanciaInicial > 250) {
+                            alert("⚠️ Estás muy lejos de la ruta de esta micro (" + Math.round(distanciaInicial) + " metros). Acércate al recorrido para activar.");
+                            return;
+                        }
+                    }
+
+                    sharingMicroLocation = true;
+                    btn.style.backgroundColor = "#dc2626"; // Rojo
+                    btn.innerHTML = "Desactivar ubicación compartida";
+
+                    microWatchId = navigator.geolocation.watchPosition(
+                        function(position) {
+                            var uLat = position.coords.latitude;
+                            var uLon = position.coords.longitude;
+                            var userLatLng = L.latLng(uLat, uLon);
+
+                            if (routePolyline) {
+                                var distanciaActual = distanciaMinimaARuta(userLatLng, routePolyline);
+                                if (distanciaActual > 150) {
+                                    alert("⚠️ Has salido de la ruta de esta micro (" + Math.round(distanciaActual) + "m). Se ha desactivado la ubicación compartida automáticamente.");
+                                    toggleCompartirUbicacionMicro();
+                                    return;
+                                }
+                            }
+
+                            if (simulatedMicroMarker) {
+                                simulatedMicroMarker.setLatLng([uLat, uLon]);
+                            } else {
+                                simulatedMicroMarker = L.marker([uLat, uLon], {
+                                    icon: L.divIcon({
+                                        className: 'simulated-bus-pin',
+                                        html: '<div style="background-color: #dc2626; color: white; padding: 4px 8px; border-radius: 6px; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-size: 11px; white-space: nowrap;">🚌 Micro {{ micro_seleccionada.numero }} (En vivo)</div>',
+                                        iconSize: [100, 30],
+                                        iconAnchor: [50, 15]
+                                    })
+                                }).addTo(map).bindPopup("<b>Micro {{ micro_seleccionada.numero }}</b><br>Simulada mediante tu ubicación actual.");
+                            }
+                        },
+                        function(error) {
+                            console.warn("Error en geolocalización de micro: ", error.message);
+                        },
+                        { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
+                    );
+
+                }, function(err) {
+                    alert("No se pudo obtener tu ubicación actual.");
+                }, {enableHighAccuracy: true});
+
+            } else {
+                sharingMicroLocation = false;
+                btn.style.backgroundColor = "#1e3a8a"; // Azul oscuro
+                btn.innerHTML = "Estoy en la micro <span style='display:block; font-size:0.75em; font-weight:normal;'>(comparte tu ubicación para ayudar a saber la ubicación de la micro)</span>";
+
+                if (microWatchId !== null) {
+                    navigator.geolocation.clearWatch(microWatchId);
+                    microWatchId = null;
+                }
+
+                if (simulatedMicroMarker) {
+                    map.removeLayer(simulatedMicroMarker);
+                    simulatedMicroMarker = null;
+                }
+            }
+        }
     </script>
 </body>
 </html>
