@@ -97,7 +97,7 @@
             background-color: #fff5f5;
         }
 
-        /* 🚌 BOTÓN DE COMPARTIR UBICACIÓN DE LA MICRO (AZUL OSCURO) */
+        /* 🚌 BOTÓN DE COMPARTIR UBICACIÓN DE LA MICRO */
         .btn-compartir-micro {
             position: fixed;
             top: 20px;
@@ -127,6 +127,16 @@
             font-weight: normal;
             opacity: 0.9;
             margin-top: 2px;
+        }
+
+        .btn-compartir-micro.btn-disabled {
+            background-color: #64748b !important;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+        .btn-compartir-micro.btn-disabled:hover {
+            transform: none;
+            background-color: #64748b !important;
         }
     </style>
 </head>
@@ -164,7 +174,7 @@
                 {% for m in micros_filtradas %}
                     <li>
                         <a href="?{% if ver_todas %}todas=true&{% endif %}micro={{ m.id }}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}" class="link-standard">
-                            <span class="badge-micro" style="background-color: {{ m.color|default:'#dc2626' }};">Micro {{ m.numero }}</span>
+                            <span class="badge-micro" style="background: {{ m.paraderos_colors_gradient }};">Micro {{ m.numero }}</span>
                             {{ m.linea_nombre }}
                         </a>
                     </li>
@@ -172,14 +182,14 @@
             </ul>
         {% endif %}
 
-        <!-- SECCIÓN 3: Paraderos Disponibles con Colores Dinámicos -->
+        <!-- SECCIÓN 3: Paraderos Disponibles con su Color Fijo Propio -->
         <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
         <div class="section-title">Paraderos</div>
         <ul>
             {% for p in paraderos %}
                 <li style="background: {% if paradero_seleccionado and paradero_seleccionado.id == p.id %}#e2e8f0{% else %}transparent{% endif %}; padding: 4px 6px; border-radius: 4px;">
-                    <a href="?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada and micro_seleccionada.id %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}" style="color: {{ p.color_micro }} !important; font-weight: bold;">
-                        <span class="badge-paradero" style="background-color: {{ p.color_micro }};">🚏</span>
+                    <a href="?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if request.GET.micro %}micro={{ request.GET.micro }}&{% endif %}paradero={{ p.id }}" style="color: {{ p.color|default:'#0284c7' }} !important; font-weight: bold; text-decoration: none !important;">
+                        <span class="badge-paradero" style="background-color: {{ p.color|default:'#0284c7' }};">🚏</span>
                         {{ p.nombre }}
                     </a>
                 </li>
@@ -235,13 +245,16 @@
         🚨 Zona de reportes
     </a>
 
-    <!-- 🚌 BOTÓN SUPERIOR DERECHA: COMPARTIR UBICACIÓN DE LA MICRO -->
-    {% if micro_seleccionada and micro_seleccionada.id %}
-    <button id="btnCompartirMicro" class="btn-compartir-micro" onclick="toggleCompartirUbicacionMicro()">
-        Estoy en la micro
-        <span>(comparte tu ubicación para ayudar a saber la ubicación de la micro)</span>
+    <!-- 🚌 BOTÓN SUPERIOR DERECHA: COMPARTIR UBICACIÓN -->
+    <button id="btnCompartirMicro" class="btn-compartir-micro {% if not request.GET.micro %}btn-disabled{% endif %}" {% if not request.GET.micro %}disabled{% else %}onclick="toggleCompartirUbicacionMicro()"{% endif %}>
+        {% if request.GET.micro %}
+            Estoy en la micro
+            <span>(comparte tu ubicación para ayudar a saber la ubicación de la micro)</span>
+        {% else %}
+            Selecciona una micro
+            <span>(para compartir tu ubicación)</span>
+        {% endif %}
     </button>
-    {% endif %}
 
     <!-- JS de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -285,7 +298,7 @@
         {% for p in paraderos %}
             {% if p.ubicacion %}
                 var marker = L.marker([{{ p.ubicacion.y }}, {{ p.ubicacion.x }}], {icon: iconoParadero}).addTo(map);
-                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if micro_seleccionada and micro_seleccionada.id %}micro={{ micro_seleccionada.id }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
+                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if request.GET.micro %}micro={{ request.GET.micro }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
             {% endif %}
         {% endfor %}
 

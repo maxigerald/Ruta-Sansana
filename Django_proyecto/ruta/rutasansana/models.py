@@ -15,17 +15,10 @@ class CategoriaRuta(models.Model):
 class Paradero(models.Model):
     nombre = models.CharField(max_length=150)
     ubicacion = models.PointField(srid=4326, null=True, blank=True)
+    color = models.CharField(max_length=50, default="#0284c7")  # Color propio del Paradero
 
     def __str__(self):
         return self.nombre
-
-    @property
-    def color_micro(self):
-        """Devuelve el color de la primera micro asociada o un color por defecto si no tiene."""
-        primera_micro = self.micros.first()
-        if primera_micro and primera_micro.color:
-            return primera_micro.color
-        return '#0284c7'  # Color celeste por defecto si no hay micro
 
 
 class Micro(models.Model):
@@ -38,6 +31,30 @@ class Micro(models.Model):
 
     def __str__(self):
         return f"Micro {self.numero} - {self.linea_nombre}"
+
+    @property
+    def paraderos_colors_gradient(self):
+        """Calcula un gradiente CSS con n divisiones iguales para los colores de los paraderos asociados."""
+        paraderos_list = list(self.paraderos.all())
+        n = len(paraderos_list)
+        
+        # Si no tiene paraderos, usa el color por defecto de la micro
+        if n == 0:
+            return self.color or "#003366"
+        # Si tiene solo 1 paradero, devuelve color sólido
+        if n == 1:
+            return paraderos_list[0].color or "#0284c7"
+        
+        # Si tiene N paraderos, dividimos el 100% en n partes iguales con cortes precisos
+        step = 100.0 / n
+        stops = []
+        for i, p in enumerate(paraderos_list):
+            c = p.color or "#0284c7"
+            start = i * step
+            end = (i + 1) * step
+            stops.append(f"{c} {start:.2f}%, {c} {end:.2f}%")
+        
+        return f"linear-gradient(to right, {', '.join(stops)})"
 
     def save(self, *args, **kwargs):
         puntos_paraderos = []
