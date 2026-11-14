@@ -261,7 +261,12 @@
     <!-- JS de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map').setView([-33.036, -71.555], 12);
+        // Inicializar mapa optimizado con fadeAnimation desactivado para mayor fluidez
+        var map = L.map('map', {
+            fadeAnimation: false,
+            zoomAnimation: true,
+            markerZoomAnimation: false
+        }).setView([-33.036, -71.555], 12);
         
         var mapboxToken = '{{ mapbox_token }}';
 
@@ -269,6 +274,8 @@
             tileSize: 512,
             zoomOffset: -1,
             maxZoom: 19,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
             attribution: '© Mapbox © OpenStreetMap'
         }).addTo(map);
 
@@ -279,6 +286,7 @@
             popupAnchor: [0, -32]     
         });
 
+        // Cargar coordenadas de la ruta de forma ligera
         var routeLatLngs = [
             {% if micro_seleccionada and coords_recorrido %}
                 {% for coord in coords_recorrido %}
@@ -290,10 +298,10 @@
         var routePolyline = null;
         {% if micro_seleccionada and coords_recorrido %}
             var routeColor = '{{ micro_seleccionada.color|default:"#003366" }}';
-            routePolyline = L.polyline(routeLatLngs, {color: routeColor, weight: 6, opacity: 0.85}).addTo(map);
+            routePolyline = L.polyline(routeLatLngs, {color: routeColor, weight: 6, opacity: 0.85, smoothFactor: 1.5}).addTo(map);
             
             {% if not paradero_seleccionado %}
-                map.fitBounds(routePolyline.getBounds(), {padding: [50, 50]});
+                map.fitBounds(routePolyline.getBounds(), {padding: [50, 50], maxZoom: 15});
             {% endif %}
         {% endif %}
 
@@ -308,7 +316,7 @@
             map.setView([{{ paradero_seleccionado.ubicacion.y }}, {{ paradero_seleccionado.ubicacion.x }}], 18);
         {% endif %}
 
-        // 📍 GEOLOCALIZACIÓN GENERAL DEL USUARIO
+        // 📍 GEOLOCALIZACIÓN GENERAL DEL USUARIO (Optimizada con throttle)
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition(
                 function(position) {
@@ -362,7 +370,8 @@
                 flatLatLngs = latlngs;
             }
 
-            for (var i = 0; i < flatLatLngs.length; i++) {
+            // Salto de 5 en 5 para cálculo ultra veloz en el mapa
+            for (var i = 0; i < flatLatLngs.length; i += 5) {
                 var dist = userLatLng.distanceTo(flatLatLngs[i]);
                 if (dist < minDist) {
                     minDist = dist;
@@ -384,7 +393,6 @@
                     var initialLatLng = L.latLng(pos.coords.latitude, pos.coords.longitude);
                     if (routePolyline) {
                         var distanciaInicial = distanciaMinimaARuta(initialLatLng, routePolyline);
-                        // Límite estricto inicial: máximo 50 metros del trayecto
                         if (distanciaInicial > 50) {
                             alert("⚠️ Debes estar sobre el trayecto para compartir la ubicación (" + Math.round(distanciaInicial) + "m de distancia). Acércate a la ruta.");
                             return;
@@ -403,7 +411,6 @@
 
                             if (routePolyline) {
                                 var distanciaActual = distanciaMinimaARuta(userLatLng, routePolyline);
-                                // Límite estricto en movimiento: si te alejas más de 50 metros, se desactiva
                                 if (distanciaActual > 50) {
                                     alert("⚠️ Has salido de la ruta (" + Math.round(distanciaActual) + "m). La ubicación compartida se ha desactivado automáticamente.");
                                     toggleCompartirUbicacionMicro();

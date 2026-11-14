@@ -167,6 +167,7 @@
 <script>
 const CSRF = "{{ csrf_token }}";
 const CATEGORIA = {{ categoria.id }};
+const estadosIniciales = {{ estados_iniciales_json|safe }};
 const $ = (root, campo) => root.querySelector(`[data-campo="${campo}"]`);
 
 /* ---------- Gestión estricta de selección única y limpieza de formularios ---------- */
@@ -221,8 +222,9 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-/* ---------- Estado y reportes ---------- */
+/* ---------- Estado y reportes (Instantáneo) ---------- */
 function pintarEstado(card, e) {
+    if (!e) return;
     $(card, "ocupacion").textContent = e.ocupacion !== null
         ? `👥 Ocupación: ${e.ocupacion_texto} (${e.ocupacion}/3)` : "👥 Sin reportes recientes";
     $(card, "parada").textContent = e.pct_no_paro !== null
@@ -237,17 +239,33 @@ function pintarEstado(card, e) {
     $(card, "poco").textContent = (e.reportes > 0 && !e.confiable) ? "Pocos reportes; el dato puede variar." : "";
 }
 
-async function cargarEstado(card) {
+// Pintar de inmediato con los datos pre-cargados por el servidor (0ms de espera)
+microCards.forEach(card => {
+    const microId = card.dataset.id;
+    if (estadosIniciales[microId]) {
+        pintarEstado(card, estadosIniciales[microId]);
+    }
+});
+
+// Refresco en segundo plano cada 20 segundos
+async function cargarTodosLosEstados() {
     try {
-        const r = await fetch(`/alertas/api/micro/${card.dataset.id}/estado/`);
-        pintarEstado(card, await r.json());
-    } catch (_) { $(card, "ocupacion").textContent = "No se pudo cargar el estado"; }
+        const r = await fetch(`/alertas/api/categoria/${CATEGORIA}/estados/`);
+        const data = await r.json();
+        
+        microCards.forEach(card => {
+            const microId = card.dataset.id;
+            if (data[microId]) {
+                pintarEstado(card, data[microId]);
+            }
+        });
+    } catch (_) { 
+        console.warn("No se pudieron cargar los estados"); 
+    }
 }
+setInterval(cargarTodosLosEstados, 20000);
 
 microCards.forEach(card => {
-    cargarEstado(card);
-    setInterval(() => cargarEstado(card), 20000);
-    
     $(card, "enviar").onclick = async (e) => {
         e.stopPropagation(); 
         $(card, "ok").textContent = ""; 
@@ -278,7 +296,7 @@ microCards.forEach(card => {
         const d = await r.json();
         if (r.ok) { 
             $(card, "ok").textContent = "¡Gracias por tu reporte!"; 
-            pintarEstado(card, d); 
+            pintarEstado(card, d); // <--- ¡Actualización instantánea con el resultado del reporte!
         } else { 
             $(card, "err").textContent = d.error || "No se pudo enviar"; 
         }
@@ -290,7 +308,6 @@ const chat = document.getElementById("chat");
 
 function linea(texto, clase, negrita) {
     const p = document.createElement("p");
-    // Guardamos el momento exacto en que se creó el mensaje (en milisegundos)
     p.dataset.timestamp = Date.now();
     
     if (clase) p.className = clase;
@@ -302,13 +319,13 @@ function linea(texto, clase, negrita) {
 
 // Limpiar mensajes que tengan más de 3 minutos (180,000 ms) cada 5 segundos
 setInterval(() => {
-    const ahora = Date.now();
+    const __ahora = Date.now();
     const tiempoVida = 3 * 60 * 1000; // 3 minutos
     const mensajes = chat.querySelectorAll("p");
     
     mensajes.forEach(p => {
         const timestamp = parseInt(p.dataset.timestamp || 0);
-        if (timestamp && (ahora - timestamp > tiempoVida)) {
+        if (timestamp && (__ahora - timestamp > tiempoVida)) {
             p.remove();
         }
     });
@@ -338,7 +355,7 @@ function conectar() {
         else if (d.tipo === "alerta") {
             linea(`ALERTA: ${d.titulo}${d.mensaje ? " – " + d.mensaje : ""}`, "al " + d.severidad);
             agregarAlertaPanel(d);
-            document.querySelectorAll(".micro").forEach(cargarEstado);
+            cargarTodosLosEstados();
         }
     };
     ws.onclose = () => {

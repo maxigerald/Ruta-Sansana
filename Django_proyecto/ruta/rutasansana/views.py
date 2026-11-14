@@ -65,9 +65,14 @@ def mapa_micros(request):
             recorrido = None
         micro_seleccionada = DummyMicro()
 
-    # Extraer coordenadas si la micro posee LineString en PostGIS
+    # 🚀 OPTIMIZACIÓN DE RENDIMIENTO: Reducir densidad de puntos si el recorrido es muy pesado
     if hasattr(micro_seleccionada, 'recorrido') and micro_seleccionada.recorrido:
-        coords_recorrido = list(micro_seleccionada.recorrido.coords)
+        raw_coords = list(micro_seleccionada.recorrido.coords)
+        if len(raw_coords) > 400:
+            step = len(raw_coords) // 250
+            coords_recorrido = raw_coords[::step]
+        else:
+            coords_recorrido = raw_coords
 
     # 7. Lógica de Reportes
     if isinstance(micro_seleccionada, Micro) and paradero_seleccionado:
@@ -104,7 +109,7 @@ def mapa_micros(request):
                 "incertidumbre": True
             }
 
-    # Serializar micros para el mapeo dinámico de categorías en el cliente si es necesario
+    # Serializar micros para el mapeo dinámico de categorías en el cliente
     micros_all = Micro.objects.all()
     micros_json = []
     for m in micros_all:

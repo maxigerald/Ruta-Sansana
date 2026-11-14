@@ -19,7 +19,7 @@ def indice(request):
             "id": m.id, 
             "numero": str(m.numero), 
             "linea": m.linea_nombre,
-            "color": m.color if hasattr(m, 'color') and m.color else '#dc2626', # NUEVO: Color asignado
+            "color": m.color if hasattr(m, 'color') and m.color else '#dc2626',
             "categoria_id": m.categorias.first().id if m.categorias.exists() else 1
         } 
         for m in Micro.objects.all().order_by('numero')
@@ -44,10 +44,20 @@ def indice(request):
 @require_GET
 def sala(request, categoria_id):
     categoria = get_object_or_404(CategoriaRuta, pk=categoria_id)
+    paradero = None
+    if request.GET.get("paradero"):
+        paradero = Paradero.objects.filter(pk=request.GET["paradero"]).first()
+    
+    # 🚀 Pre-calcular estados en el servidor para carga instantánea
+    estados_iniciales = {}
+    for micro in categoria.micros.all():
+        estados_iniciales[micro.id] = estado_micro(micro, paradero)
+
     return render(request, "alertas/sala.html", {
         "categoria": categoria,
         "micros": categoria.micros.all(),
         "alertas": alertas_activas(categoria=categoria),
+        "estados_iniciales_json": estados_iniciales,
     })
 
 
@@ -58,6 +68,19 @@ def api_estado(request, micro_id):
     if request.GET.get("paradero"):
         paradero = get_object_or_404(Paradero, pk=request.GET["paradero"])
     return JsonResponse(estado_micro(micro, paradero))
+
+
+@require_GET
+def api_estados_categoria(request, categoria_id):
+    categoria = get_object_or_404(CategoriaRuta, pk=categoria_id)
+    paradero = None
+    if request.GET.get("paradero"):
+        paradero = Paradero.objects.filter(pk=request.GET["paradero"]).first()
+    
+    estados = {}
+    for micro in categoria.micros.all():
+        estados[micro.id] = estado_micro(micro, paradero)
+    return JsonResponse(estados)
 
 
 @require_GET
@@ -81,7 +104,6 @@ def api_reportar(request, micro_id):
     if parada not in ReporteEstado.Parada.values:
         return JsonResponse({"error": "Valor de parada inválido"}, status=400)
 
-    # Validar el nuevo parámetro de estado físico (0 a 5)
     try:
         estado_fisico = int(request.POST.get("estado_fisico", ReporteEstado.EstadoFisico.SIN_DATO))
         ReporteEstado.EstadoFisico(estado_fisico)
