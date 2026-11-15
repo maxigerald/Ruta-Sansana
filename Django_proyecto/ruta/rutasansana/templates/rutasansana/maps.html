@@ -261,7 +261,7 @@
     <!-- JS de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializar mapa optimizado con fadeAnimation desactivado para mayor fluidez
+        // Inicializar mapa
         var map = L.map('map', {
             fadeAnimation: false,
             zoomAnimation: true,
@@ -270,6 +270,7 @@
         
         var mapboxToken = '{{ mapbox_token }}';
 
+        // 🗺️ MAPBOX ORIGINAL
         L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
             tileSize: 512,
             zoomOffset: -1,
@@ -286,7 +287,7 @@
             popupAnchor: [0, -32]     
         });
 
-        // Cargar coordenadas de la ruta de forma ligera
+        // Cargar coordenadas de la ruta
         var routeLatLngs = [
             {% if micro_seleccionada and coords_recorrido %}
                 {% for coord in coords_recorrido %}
@@ -303,6 +304,30 @@
             {% if not paradero_seleccionado %}
                 map.fitBounds(routePolyline.getBounds(), {padding: [50, 50], maxZoom: 15});
             {% endif %}
+
+            // 🟢 MARCADOR DE INICIO (Círculo blanco con borde del color de la micro)
+            {% if start_coord %}
+                L.circleMarker([{{ start_coord.0 }}, {{ start_coord.1 }}], {
+                    radius: 9,
+                    fillColor: '#ffffff',
+                    color: routeColor,
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 1
+                }).addTo(map).bindPopup("<b>Inicio de la ruta</b>").bindTooltip("Inicio de la ruta");
+            {% endif %}
+
+            // 🔴 MARCADOR DE FIN (Círculo relleno del color de la micro con borde blanco)
+            {% if end_coord %}
+                L.circleMarker([{{ end_coord.0 }}, {{ end_coord.1 }}], {
+                    radius: 9,
+                    fillColor: routeColor,
+                    color: '#ffffff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 1
+                }).addTo(map).bindPopup("<b>Final de la ruta</b>").bindTooltip("Final de la ruta");
+            {% endif %}
         {% endif %}
 
         {% for p in paraderos %}
@@ -316,7 +341,7 @@
             map.setView([{{ paradero_seleccionado.ubicacion.y }}, {{ paradero_seleccionado.ubicacion.x }}], 18);
         {% endif %}
 
-        // 📍 GEOLOCALIZACIÓN GENERAL DEL USUARIO (Optimizada con throttle)
+        // 📍 GEOLOCALIZACIÓN GENERAL DEL USUARIO
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition(
                 function(position) {
@@ -370,7 +395,6 @@
                 flatLatLngs = latlngs;
             }
 
-            // Salto de 5 en 5 para cálculo ultra veloz en el mapa
             for (var i = 0; i < flatLatLngs.length; i += 5) {
                 var dist = userLatLng.distanceTo(flatLatLngs[i]);
                 if (dist < minDist) {
