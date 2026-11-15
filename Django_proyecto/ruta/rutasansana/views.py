@@ -1,6 +1,5 @@
 from datetime import timedelta
 from django.conf import settings
-from django.core import serializers
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -25,14 +24,20 @@ def mapa_micros(request):
     micros_filtradas = Micro.objects.none()
     if ver_todas:
         micros_filtradas = Micro.objects.all().order_by('numero')
+    elif paradero_id:
+        par = Paradero.objects.filter(pk=paradero_id).first()
+        if par:
+            if hasattr(par, 'micros'):
+                micros_filtradas = par.micros.all()
+            elif hasattr(par, 'micro_set'):
+                micros_filtradas = par.micro_set.all()
+            if categoria_id:
+                micros_filtradas = micros_filtradas.filter(categorias__pk=categoria_id)
+            micros_filtradas = micros_filtradas.order_by('numero')
     elif categoria_id:
         cat = CategoriaRuta.objects.filter(pk=categoria_id).first()
         if cat:
             micros_filtradas = cat.micros.all().order_by('numero')
-    elif paradero_id:
-        par = Paradero.objects.filter(pk=paradero_id).first()
-        if par and hasattr(par, 'micros'):
-            micros_filtradas = par.micros.all().order_by('numero')
     else:
         primera_cat = categorias.first()
         if primera_cat:

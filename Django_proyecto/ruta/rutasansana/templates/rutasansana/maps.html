@@ -23,7 +23,7 @@
         
         a:hover { 
             text-decoration: none !important; 
-            transform: scale(1.10);
+            transform: scale(1.03);
             transform-origin: left center;
         }
 
@@ -172,7 +172,7 @@
             </div>
             <ul>
                 {% for m in micros_filtradas %}
-                    <li>
+                    <li style="{% if micro_seleccionada and micro_seleccionada.id == m.id %}background: #e2e8f0; padding: 4px 6px; border-radius: 4px;{% endif %}">
                         <a href="?{% if ver_todas %}todas=true&{% endif %}micro={{ m.id }}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}" class="link-standard">
                             <span class="badge-micro" style="background: {{ m.paraderos_colors_gradient }};">Micro {{ m.numero }}</span>
                             {{ m.linea_nombre }}
@@ -182,7 +182,7 @@
             </ul>
         {% endif %}
 
-        <!-- SECCIÓN 3: Paraderos Disponibles con su Color Fijo Propio -->
+        <!-- SECCIÓN 3: Paraderos Disponibles -->
         <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
         <div class="section-title">Paraderos</div>
         <ul>
@@ -214,18 +214,12 @@
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>{{ estado_reportes.minutos }} mins</strong></p>
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong>{{ estado_reportes.ocupacion }} / 3</strong></p>
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: <strong>{{ estado_reportes.alerta }}</strong></p>
-                    
-                    {% if estado_reportes.incertidumbre %}
-                        <p style="margin: 6px 0; font-size: 0.9em; color: #d9534f; font-style: italic;">
-                            ⚠️ {{ estado_reportes.mensaje_incertidumbre }}
-                        </p>
-                    {% endif %}
                 {% else %}
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>-- mins</strong></p>
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong>-- / 3</strong></p>
                     <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: --</p>
                     <p style="margin: 6px 0; font-size: 0.9em; color: #d9534f; font-style: italic;">
-                        ⚠️ {{ estado_reportes.mensaje|default:"Selecciona un paradero para ver reportes." }}
+                        ⚠️ Selecciona un paradero para ver reportes.
                     </p>
                 {% endif %}
                 
@@ -261,7 +255,6 @@
     <!-- JS de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializar mapa
         var map = L.map('map', {
             fadeAnimation: false,
             zoomAnimation: true,
@@ -287,7 +280,6 @@
             popupAnchor: [0, -32]     
         });
 
-        // Cargar coordenadas de la ruta
         var routeLatLngs = [
             {% if micro_seleccionada and coords_recorrido %}
                 {% for coord in coords_recorrido %}
@@ -305,7 +297,7 @@
                 map.fitBounds(routePolyline.getBounds(), {padding: [50, 50], maxZoom: 15});
             {% endif %}
 
-            // 🟢 MARCADOR DE INICIO (Círculo blanco con borde del color de la micro)
+            // 🟢 MARCADOR DE INICIO
             {% if start_coord %}
                 L.circleMarker([{{ start_coord.0 }}, {{ start_coord.1 }}], {
                     radius: 9,
@@ -317,7 +309,7 @@
                 }).addTo(map).bindPopup("<b>Inicio de la ruta</b>").bindTooltip("Inicio de la ruta");
             {% endif %}
 
-            // 🔴 MARCADOR DE FIN (Círculo relleno del color de la micro con borde blanco)
+            // 🔴 MARCADOR DE FIN
             {% if end_coord %}
                 L.circleMarker([{{ end_coord.0 }}, {{ end_coord.1 }}], {
                     radius: 9,
@@ -337,6 +329,7 @@
             {% endif %}
         {% endfor %}
 
+        // 🎯 ZOOM AUTOMÁTICO AL PARADERO SELECCIONADO
         {% if paradero_seleccionado and paradero_seleccionado.ubicacion %}
             map.setView([{{ paradero_seleccionado.ubicacion.y }}, {{ paradero_seleccionado.ubicacion.x }}], 18);
         {% endif %}
@@ -367,7 +360,6 @@
             );
         }
 
-        // 🚌 LÓGICA DE SIMULACIÓN Y CONTROL DE RUTA DE LA MICRO
         var sharingMicroLocation = false;
         var microWatchId = null;
         var simulatedMicroMarker = null;
@@ -424,7 +416,7 @@
                     }
 
                     sharingMicroLocation = true;
-                    btn.style.backgroundColor = "#dc2626"; // Rojo
+                    btn.style.backgroundColor = "#dc2626";
                     btn.innerHTML = "Desactivar ubicación compartida";
 
                     microWatchId = navigator.geolocation.watchPosition(
@@ -467,7 +459,7 @@
 
             } else {
                 sharingMicroLocation = false;
-                btn.style.backgroundColor = "#1e3a8a"; // Azul oscuro
+                btn.style.backgroundColor = "#1e3a8a";
                 btn.innerHTML = "Estoy en la micro <span style='display:block; font-size:0.75em; font-weight:normal;'>(comparte tu ubicación para ayudar a saber la ubicación de la micro)</span>";
 
                 if (microWatchId !== null) {
