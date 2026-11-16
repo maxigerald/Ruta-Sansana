@@ -268,6 +268,8 @@
         var routePolyline = null;
         var startMarker = null;
         var endMarker = null;
+        var wsUbicacion = null;
+        var markersMicrosEnVivo = {};
 
         {% if micro_seleccionada and coords_recorrido %}
             var routeColor = '{{ micro_seleccionada.color|default:"#003366" }}';
@@ -311,6 +313,36 @@
             {% endif %}
         {% endfor %}
 
+        // WebSocket para sincronizar la ubicación en tiempo real con otros usuarios
+        function conectarWebSocketUbicacion(categoriaId, microId) {
+            if (!categoriaId || !microId) return;
+            const proto = location.protocol === "https:" ? "wss" : "ws";
+            wsUbicacion = new WebSocket(`${proto}://${location.host}/ws/alertas/chat/${categoriaId}/?alias=Mapa`);
+
+            wsUbicacion.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                if (data.tipo === "ubicacion_en_vivo" && String(data.micro_id) === String(microId)) {
+                    const { lat, lng, alias } = data;
+                    if (markersMicrosEnVivo[microId]) {
+                        markersMicrosEnVivo[microId].setLatLng([lat, lng]);
+                    } else {
+                        markersMicrosEnVivo[microId] = L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                className: 'live-bus-pin',
+                                html: `<div style="background-color: #dc2626; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-size: 11px; white-space: nowrap; text-align: center;">🚌 Micro en vivo (${alias || 'Pasajero'})</div>`,
+                                iconSize: [160, 30],
+                                iconAnchor: [80, 15]
+                            })
+                        }).addTo(map).bindPopup(`<b>Micro en vivo</b><br>Compartida por: ${alias || 'Pasajero'}`);
+                    }
+                }
+            };
+        }
+
+        {% if micro_seleccionada and micro_seleccionada.categorias.first %}
+        conectarWebSocketUbicacion({{ micro_seleccionada.categorias.first.id }}, {{ micro_seleccionada.id }});
+        {% endif %}
+
         async function actualizarEstadoMicro(microId) {
             try {
                 const res = await fetch(`/alertas/api/micro/${microId}/estado/`);
@@ -348,6 +380,11 @@
             
             history.pushState(null, '', url);
 
+            if (wsUbicacion) {
+                wsUbicacion.close();
+                wsUbicacion = null;
+            }
+
             try {
                 const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
                 const data = await res.json();
@@ -355,6 +392,8 @@
                 if (routePolyline) map.removeLayer(routePolyline);
                 if (startMarker) map.removeLayer(startMarker);
                 if (endMarker) map.removeLayer(endMarker);
+                Object.values(markersMicrosEnVivo).forEach(m => map.removeLayer(m));
+                markersMicrosEnVivo = {};
 
                 if (data.coords && data.coords.length > 0) {
                     routePolyline = L.polyline(data.coords, {
@@ -428,6 +467,7 @@
                         </div>
                     `;
                     actualizarEstadoMicro(data.id);
+                    conectarWebSocketUbicacion(data.categoria_id, data.id);
                 } else {
                     container.innerHTML = '';
                 }
@@ -505,7 +545,7 @@
                     }
                 });
             }
-            flatten(flatLatLngs);
+            flatten(latlngs);
 
             if (flatLatLngs.length === 0) {
                 flatLatLngs = latlngs;
@@ -558,17 +598,28 @@
                                 }
                             }
 
+                            // Enviar ubicación en tiempo real por WebSocket a todos los usuarios
+                            if (wsUbicacion && wsUbicacion.readyState === WebSocket.OPEN) {
+                                wsUbicacion.send(JSON.stringify({
+                                    tipo: "ubicacion_en_vivo",
+                                    micro_id: {% if micro_seleccionada %}{{ micro_seleccionada.id }}{% else %}null{% endif %},
+                                    lat: uLat,
+                                    lng: uLon,
+                                    alias: localStorage.getItem("alias") || "Pasajero"
+                                }));
+                            }
+
                             if (simulatedMicroMarker) {
                                 simulatedMicroMarker.setLatLng([uLat, uLon]);
                             } else {
                                 simulatedMicroMarker = L.marker([uLat, uLon], {
                                     icon: L.divIcon({
                                         className: 'simulated-bus-pin',
-                                        html: '<div style="background-color: #dc2626; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-size: 11px; white-space: nowrap; text-align: center;">🚌 Micro {{ micro_seleccionada.numero }} (En vivo)</div>',
+                                        html: '<div style="background-color: #dc2626; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-size: 11px; white-space: nowrap; text-align: center;">🚌 Micro {% if micro_seleccionada %}{{ micro_seleccionada.numero }}{% endif %} (En vivo)</div>',
                                         iconSize: [140, 30],
                                         iconAnchor: [70, 15]
                                     })
-                                }).addTo(map).bindPopup("<b>Micro {{ micro_seleccionada.numero }}</b><br>Simulada mediante tu ubicación actual.");
+                                }).addTo(map).bindPopup("<b>Tu micro</b><br>Transmitiendo ubicación en tiempo real.");
                             }
                         },
                         function(error) {
