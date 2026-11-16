@@ -6,14 +6,13 @@
     <title>Ruta Sansana - Recorridos</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: Arial, sans-serif; display: flex; margin: 0; height: 100vh; }
-        #sidebar { width: 340px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); box-sizing: border-box; z-index: 1000; }
-        #map { flex-grow: 1; height: 100%; z-index: 1; }
+        body { font-family: Arial, sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
+        #sidebar { width: 340px; padding: 20px; background: #f8f9fa; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1); box-sizing: border-box; z-index: 1000; height: 100vh; }
+        #map { flex-grow: 1; height: 100vh; z-index: 1; }
         .section-title { font-weight: bold; margin-top: 15px; color: #003366; font-size: 1.1em; border-bottom: 2px solid #003366; padding-bottom: 3px; margin-bottom: 10px; }
         ul { padding-left: 18px; margin-top: 5px; margin-bottom: 15px; list-style-type: none; }
         li { margin-bottom: 10px; font-size: 0.9em; }
 
-        /* ESTILOS GLOBALES DE ENLACES */
         a { 
             text-decoration: none !important; 
             display: inline-flex;
@@ -23,14 +22,11 @@
         
         a:hover { 
             text-decoration: none !important; 
-            transform: scale(1.10);
+            transform: scale(1.03);
             transform-origin: left center;
         }
 
         .link-standard {
-            color: #1e293b !important;
-        }
-        .link-standard:hover {
             color: #1e293b !important;
         }
         
@@ -74,7 +70,6 @@
         }
         .btn-ver-todas:hover {
             background: #cbd5e1;
-            transform: scale(1.03);
         }
 
         .btn-flotante {
@@ -97,7 +92,6 @@
             background-color: #fff5f5;
         }
 
-        /* 🚌 BOTÓN DE COMPARTIR UBICACIÓN DE LA MICRO */
         .btn-compartir-micro {
             position: fixed;
             top: 20px;
@@ -119,7 +113,6 @@
             align-items: center;
         }
         .btn-compartir-micro:hover {
-            transform: scale(1.02);
             background-color: #1e40af;
         }
         .btn-compartir-micro span {
@@ -134,10 +127,6 @@
             cursor: not-allowed;
             opacity: 0.8;
         }
-        .btn-compartir-micro.btn-disabled:hover {
-            transform: none;
-            background-color: #64748b !important;
-        }
     </style>
 </head>
 <body>
@@ -146,19 +135,20 @@
         <h2 style="color: #003366; font-size: 1.3em; margin-top: 0;">Ruta Sansana 🚌</h2>
         <p style="font-size: 0.85em; color: #666;">Monitoreo y recorridos en Valparaíso y Viña</p>
         
-        <a href="?todas=true" class="btn-ver-todas">📋 Ver todas las micros</a>
+        <a href="?todas=true" class="btn-ver-todas ajax-link">📋 Ver todas las micros</a>
         
         <div class="section-title">Tramos Principales</div>
         <ul>
             {% for cat in categorias %}
                 <li>
-                    <a href="?categoria={{ cat.id }}" class="link-standard">📍 {{ cat.nombre }}</a>
+                    <a href="?categoria={{ cat.id }}" class="link-standard ajax-link">📍 {{ cat.nombre }}</a>
                 </li>
             {% empty %}
                 <li>No hay categorías registradas en el <a href="/admin/" target="_blank">Admin</a>.</li>
             {% endfor %}
         </ul>
 
+        <div id="sidebar-micros-section">
         {% if micros_filtradas %}
             <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
             <div class="section-title">
@@ -172,8 +162,8 @@
             </div>
             <ul>
                 {% for m in micros_filtradas %}
-                    <li>
-                        <a href="?{% if ver_todas %}todas=true&{% endif %}micro={{ m.id }}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}" class="link-standard">
+                    <li style="{% if micro_seleccionada and micro_seleccionada.id == m.id %}background: #e2e8f0; padding: 4px 6px; border-radius: 4px;{% endif %}">
+                        <a href="?{% if ver_todas %}todas=true&{% endif %}micro={{ m.id }}{% if paradero_seleccionado %}&paradero={{ paradero_seleccionado.id }}{% endif %}{% if request.GET.categoria %}&categoria={{ request.GET.categoria }}{% endif %}" class="link-standard ajax-link">
                             <span class="badge-micro" style="background: {{ m.paraderos_colors_gradient }};">Micro {{ m.numero }}</span>
                             {{ m.linea_nombre }}
                         </a>
@@ -181,14 +171,14 @@
                 {% endfor %}
             </ul>
         {% endif %}
+        </div>
 
-        <!-- SECCIÓN 3: Paraderos Disponibles con su Color Fijo Propio -->
         <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 15px 0;">
         <div class="section-title">Paraderos</div>
-        <ul>
+        <ul id="paraderos-list">
             {% for p in paraderos %}
                 <li style="background: {% if paradero_seleccionado and paradero_seleccionado.id == p.id %}#e2e8f0{% else %}transparent{% endif %}; padding: 4px 6px; border-radius: 4px;">
-                    <a href="?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if request.GET.micro %}micro={{ request.GET.micro }}&{% endif %}paradero={{ p.id }}" style="color: {{ p.color|default:'#0284c7' }} !important; font-weight: bold; text-decoration: none !important;">
+                    <a href="?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if request.GET.micro %}micro={{ request.GET.micro }}&{% endif %}paradero={{ p.id }}" class="link-standard ajax-link" style="color: {{ p.color|default:'#0284c7' }} !important; font-weight: bold; text-decoration: none !important;">
                         <span class="badge-paradero" style="background-color: {{ p.color|default:'#0284c7' }};">🚏</span>
                         {{ p.nombre }}
                     </a>
@@ -198,9 +188,9 @@
             {% endfor %}
         </ul>
 
+        <div id="micro-details-container">
         {% if micro_seleccionada %}
             <hr style="border: 0; border-top: 2px solid #cbd5e1; margin: 15px 0;">
-            
             <div style="padding-top: 5px;">
                 <h3 style="color: {{ micro_seleccionada.color|default:'#d32f2f' }}; margin: 0 0 10px 0; font-size: 1.25em;">
                     Micro {{ micro_seleccionada.numero|default:"--" }}
@@ -210,24 +200,9 @@
                     Recorrido: <strong>{{ micro_seleccionada.linea_nombre|default:"General" }}</strong>
                 </p>
 
-                {% if estado_reportes and estado_reportes.activo %}
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>{{ estado_reportes.minutos }} mins</strong></p>
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong>{{ estado_reportes.ocupacion }} / 3</strong></p>
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: <strong>{{ estado_reportes.alerta }}</strong></p>
-                    
-                    {% if estado_reportes.incertidumbre %}
-                        <p style="margin: 6px 0; font-size: 0.9em; color: #d9534f; font-style: italic;">
-                            ⚠️ {{ estado_reportes.mensaje_incertidumbre }}
-                        </p>
-                    {% endif %}
-                {% else %}
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong>-- mins</strong></p>
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong>-- / 3</strong></p>
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: --</p>
-                    <p style="margin: 6px 0; font-size: 0.9em; color: #d9534f; font-style: italic;">
-                        ⚠️ {{ estado_reportes.mensaje|default:"Selecciona un paradero para ver reportes." }}
-                    </p>
-                {% endif %}
+                <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong id="val-tiempo">{{ estado_micro.minutos|default:"--" }} mins</strong></p>
+                <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong id="val-ocupacion">{% if estado_micro and estado_micro.ocupacion is not None %}{{ estado_micro.ocupacion_texto|default:estado_micro.ocupacion_text }} ({{ estado_micro.ocupacion }}/3){% else %}-- / 3{% endif %}</strong></p>
+                <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: <strong id="val-alerta">{% if estado_micro and estado_micro.pct_no_paro is not None %}{{ estado_micro.pct_no_paro }}% reporta que no paró{% else %}--{% endif %}</strong></p>
                 
                 {% with cat=micro_seleccionada.categorias.first %}
                 <a id="btnReporteOcupacion" href="{% if cat %}{% url 'alertas:sala' cat.id %}#micro-{{ micro_seleccionada.id }}{% else %}/alertas/{% endif %}" 
@@ -237,17 +212,15 @@
                 {% endwith %}
             </div>
         {% endif %}
+        </div>
     </div>
 
-    <!-- Contenedor del Mapa -->
     <div id="map"></div>
 
-    <!-- BOTÓN GLOBAL FLOTANTE EN LA ESQUINA DEL MAPA -->
     <a href="/alertas/" class="btn-flotante">
         🚨 Zona de reportes
     </a>
 
-    <!-- 🚌 BOTÓN SUPERIOR DERECHA: COMPARTIR UBICACIÓN -->
     <button id="btnCompartirMicro" class="btn-compartir-micro {% if not request.GET.micro %}btn-disabled{% endif %}" {% if not request.GET.micro %}disabled{% else %}onclick="toggleCompartirUbicacionMicro()"{% endif %}>
         {% if request.GET.micro %}
             Estoy en la micro
@@ -258,10 +231,8 @@
         {% endif %}
     </button>
 
-    <!-- JS de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializar mapa
         var map = L.map('map', {
             fadeAnimation: false,
             zoomAnimation: true,
@@ -270,7 +241,6 @@
         
         var mapboxToken = '{{ mapbox_token }}';
 
-        // 🗺️ MAPBOX ORIGINAL
         L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
             tileSize: 512,
             zoomOffset: -1,
@@ -287,7 +257,6 @@
             popupAnchor: [0, -32]     
         });
 
-        // Cargar coordenadas de la ruta
         var routeLatLngs = [
             {% if micro_seleccionada and coords_recorrido %}
                 {% for coord in coords_recorrido %}
@@ -297,17 +266,15 @@
         ];
 
         var routePolyline = null;
+        var startMarker = null;
+        var endMarker = null;
+
         {% if micro_seleccionada and coords_recorrido %}
             var routeColor = '{{ micro_seleccionada.color|default:"#003366" }}';
             routePolyline = L.polyline(routeLatLngs, {color: routeColor, weight: 6, opacity: 0.85, smoothFactor: 1.5}).addTo(map);
             
-            {% if not paradero_seleccionado %}
-                map.fitBounds(routePolyline.getBounds(), {padding: [50, 50], maxZoom: 15});
-            {% endif %}
-
-            // 🟢 MARCADOR DE INICIO (Círculo blanco con borde del color de la micro)
             {% if start_coord %}
-                L.circleMarker([{{ start_coord.0 }}, {{ start_coord.1 }}], {
+                startMarker = L.circleMarker([{{ start_coord.0 }}, {{ start_coord.1 }}], {
                     radius: 9,
                     fillColor: '#ffffff',
                     color: routeColor,
@@ -317,9 +284,8 @@
                 }).addTo(map).bindPopup("<b>Inicio de la ruta</b>").bindTooltip("Inicio de la ruta");
             {% endif %}
 
-            // 🔴 MARCADOR DE FIN (Círculo relleno del color de la micro con borde blanco)
             {% if end_coord %}
-                L.circleMarker([{{ end_coord.0 }}, {{ end_coord.1 }}], {
+                endMarker = L.circleMarker([{{ end_coord.0 }}, {{ end_coord.1 }}], {
                     radius: 9,
                     fillColor: routeColor,
                     color: '#ffffff',
@@ -328,20 +294,171 @@
                     fillOpacity: 1
                 }).addTo(map).bindPopup("<b>Final de la ruta</b>").bindTooltip("Final de la ruta");
             {% endif %}
+
+            {% if paradero_seleccionado and paradero_seleccionado.ubicacion %}
+                map.setView([{{ paradero_seleccionado.ubicacion.y }}, {{ paradero_seleccionado.ubicacion.x }}], 18);
+            {% else %}
+                map.fitBounds(routePolyline.getBounds(), {padding: [50, 50], maxZoom: 15});
+            {% endif %}
+        {% elif paradero_seleccionado and paradero_seleccionado.ubicacion %}
+            map.setView([{{ paradero_seleccionado.ubicacion.y }}, {{ paradero_seleccionado.ubicacion.x }}], 18);
         {% endif %}
 
         {% for p in paraderos %}
             {% if p.ubicacion %}
                 var marker = L.marker([{{ p.ubicacion.y }}, {{ p.ubicacion.x }}], {icon: iconoParadero}).addTo(map);
-                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if request.GET.micro %}micro={{ request.GET.micro }}&{% endif %}paradero={{ p.id }}'>Seleccionar este paradero</a>");
+                marker.bindPopup("<b>{{ p.nombre }}</b><br><a href='?{% if request.GET.categoria %}categoria={{ request.GET.categoria }}&{% endif %}{% if request.GET.micro %}micro={{ request.GET.micro }}&{% endif %}paradero={{ p.id }}' class='link-standard ajax-link'>Seleccionar este paradero</a>");
             {% endif %}
         {% endfor %}
 
-        {% if paradero_seleccionado and paradero_seleccionado.ubicacion %}
-            map.setView([{{ paradero_seleccionado.ubicacion.y }}, {{ paradero_seleccionado.ubicacion.x }}], 18);
+        async function actualizarEstadoMicro(microId) {
+            try {
+                const res = await fetch(`/alertas/api/micro/${microId}/estado/`);
+                const est = await res.json();
+                
+                const elOcu = document.getElementById('val-ocupacion');
+                const elAle = document.getElementById('val-alerta');
+                
+                if (elOcu) {
+                    if (est.ocupacion !== null && est.ocupacion !== undefined) {
+                        const textoOcu = est.ocupacion_texto || est.ocupacion_text || "";
+                        elOcu.textContent = `${textoOcu} (${est.ocupacion}/3)`;
+                    } else {
+                        elOcu.textContent = "-- / 3";
+                    }
+                }
+                
+                if (elAle) {
+                    if (est.pct_no_paro !== null && est.pct_no_paro !== undefined) {
+                        elAle.textContent = `${est.pct_no_paro}% reporta que no paró`;
+                    } else {
+                        elAle.textContent = "--";
+                    }
+                }
+            } catch (err) {
+                console.warn("No se pudo actualizar el estado de la micro");
+            }
+        }
+
+        document.body.addEventListener('click', async function(e) {
+            const link = e.target.closest('.ajax-link');
+            if (!link) return;
+            e.preventDefault();
+            const url = link.getAttribute('href');
+            
+            history.pushState(null, '', url);
+
+            try {
+                const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                const data = await res.json();
+
+                if (routePolyline) map.removeLayer(routePolyline);
+                if (startMarker) map.removeLayer(startMarker);
+                if (endMarker) map.removeLayer(endMarker);
+
+                if (data.coords && data.coords.length > 0) {
+                    routePolyline = L.polyline(data.coords, {
+                        color: data.color,
+                        weight: 6,
+                        opacity: 0.85,
+                        smoothFactor: 1.5
+                    }).addTo(map);
+
+                    if (data.start_coord) {
+                        startMarker = L.circleMarker(data.start_coord, {
+                            radius: 9,
+                            fillColor: '#ffffff',
+                            color: data.color,
+                            weight: 3,
+                            opacity: 1,
+                            fillOpacity: 1
+                        }).addTo(map).bindPopup("<b>Inicio de la ruta</b>").bindTooltip("Inicio de la ruta");
+                    }
+
+                    if (data.end_coord) {
+                        endMarker = L.circleMarker(data.end_coord, {
+                            radius: 9,
+                            fillColor: data.color,
+                            color: '#ffffff',
+                            weight: 3,
+                            opacity: 1,
+                            fillOpacity: 1
+                        }).addTo(map).bindPopup("<b>Final de la ruta</b>").bindTooltip("Final de la ruta");
+                    }
+
+                    if (data.paradero_coord) {
+                        map.setView(data.paradero_coord, 18);
+                    } else {
+                        map.fitBounds(routePolyline.getBounds(), {padding: [50, 50], maxZoom: 15});
+                    }
+                } else if (data.paradero_coord) {
+                    map.setView(data.paradero_coord, 18);
+                }
+
+                const container = document.getElementById('micro-details-container');
+                if (data.id) {
+                    let ocupacionTexto = "-- / 3";
+                    let alertaTexto = "--";
+                    if (data.estado) {
+                        if (data.estado.ocupacion !== null && data.estado.ocupacion !== undefined) {
+                            let textOcu = data.estado.ocupacion_text || data.estado.ocupacion_texto || "";
+                            ocupacionTexto = `${textOcu} (${data.estado.ocupacion}/3)`;
+                        }
+                        if (data.estado.pct_no_paro !== null && data.estado.pct_no_paro !== undefined) {
+                            alertaTexto = `${data.estado.pct_no_paro}% reporta que no paró`;
+                        }
+                    }
+
+                    container.innerHTML = `
+                        <hr style="border: 0; border-top: 2px solid #cbd5e1; margin: 15px 0;">
+                        <div style="padding-top: 5px;">
+                            <h3 style="color: ${data.color}; margin: 0 0 10px 0; font-size: 1.25em;">
+                                Micro ${data.numero}
+                            </h3>
+                            <p style="margin: 0 0 15px 0; font-size: 0.95em; color: #1e293b;">
+                                Recorrido: <strong>${data.linea_nombre}</strong>
+                            </p>
+                            <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⏱ Tiempo estimado: <strong id="val-tiempo">-- mins</strong></p>
+                            <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">👥 Ocupación actual: <strong id="val-ocupacion">${ocupacionTexto}</strong></p>
+                            <p style="margin: 6px 0; font-size: 0.9em; color: #1e293b;">⚠️ Alerta: <strong id="val-alerta">${alertaTexto}</strong></p>
+                            <a id="btnReporteOcupacion" href="/alertas/chat/${data.categoria_id}/#micro-${data.id}" 
+                               style="display: block; background: #dc2626; color: white !important; text-align: center; padding: 10px; border-radius: 4px; font-weight: bold; font-size: 0.95em; margin-top: 20px;">
+                                + Enviar Reporte de Ocupación
+                            </a>
+                        </div>
+                    `;
+                    actualizarEstadoMicro(data.id);
+                } else {
+                    container.innerHTML = '';
+                }
+
+                setTimeout(() => { map.invalidateSize(); }, 50);
+
+                const btnCompartir = document.getElementById('btnCompartirMicro');
+                if (btnCompartir) {
+                    if (data.id) {
+                        btnCompartir.disabled = false;
+                        btnCompartir.classList.remove('btn-disabled');
+                        btnCompartir.setAttribute('onclick', 'toggleCompartirUbicacionMicro()');
+                        btnCompartir.innerHTML = `Estoy en la micro<br><span>(comparte tu ubicación para ayudar a saber la ubicación de la micro)</span>`;
+                    } else {
+                        btnCompartir.disabled = true;
+                        btnCompartir.classList.add('btn-disabled');
+                        btnCompartir.innerHTML = `Selecciona una micro<br><span>(para compartir tu ubicación)</span>`;
+                    }
+                }
+
+            } catch (err) {
+                window.location.href = url;
+            }
+        });
+
+        {% if micro_seleccionada %}
+        document.addEventListener("DOMContentLoaded", () => {
+            actualizarEstadoMicro({{ micro_seleccionada.id }});
+        });
         {% endif %}
 
-        // 📍 GEOLOCALIZACIÓN GENERAL DEL USUARIO
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition(
                 function(position) {
@@ -367,7 +484,6 @@
             );
         }
 
-        // 🚌 LÓGICA DE SIMULACIÓN Y CONTROL DE RUTA DE LA MICRO
         var sharingMicroLocation = false;
         var microWatchId = null;
         var simulatedMicroMarker = null;
@@ -389,7 +505,7 @@
                     }
                 });
             }
-            flatten(latlngs);
+            flatten(flatLatLngs);
 
             if (flatLatLngs.length === 0) {
                 flatLatLngs = latlngs;
@@ -424,7 +540,7 @@
                     }
 
                     sharingMicroLocation = true;
-                    btn.style.backgroundColor = "#dc2626"; // Rojo
+                    btn.style.backgroundColor = "#dc2626";
                     btn.innerHTML = "Desactivar ubicación compartida";
 
                     microWatchId = navigator.geolocation.watchPosition(
@@ -467,7 +583,7 @@
 
             } else {
                 sharingMicroLocation = false;
-                btn.style.backgroundColor = "#1e3a8a"; // Azul oscuro
+                btn.style.backgroundColor = "#1e3a8a";
                 btn.innerHTML = "Estoy en la micro <span style='display:block; font-size:0.75em; font-weight:normal;'>(comparte tu ubicación para ayudar a saber la ubicación de la micro)</span>";
 
                 if (microWatchId !== null) {

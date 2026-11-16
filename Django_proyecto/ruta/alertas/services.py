@@ -3,18 +3,18 @@ from datetime import timedelta
 from django.db.models import Q
 from django.utils import timezone
 
-from rutasansana.models import Reporte  # solo lectura: se aprovechan los reportes que ya existen
+from rutasansana.models import Reporte 
 
 from .models import Alerta, ReporteEstado
 
-VENTANA_MIN = 10          # minutos que cuenta un reporte
-MIN_REPORTES = 2          # bajo esto el dato se marca como poco confiable
-VENTANA_NO_PARA_MIN = 15  # ventana para detectar "no está parando"
-UMBRAL_NO_PARA = 3        # mínimo de reportes "no paró"...
-PCT_NO_PARA = 60          # ...y que sean al menos este % de los reportes de parada
+VENTANA_MIN = 10        
+MIN_REPORTES = 2          
+VENTANA_NO_PARA_MIN = 15 
+UMBRAL_NO_PARA = 3      
+PCT_NO_PARA = 60        
 TEXTO_OCUPACION = {1: "Vacía", 2: "Media", 3: "Llena"}
 TEXTO_OCUPACION = {1: "Vacía", 2: "Media", 3: "Llena"}
-# NUEVO DICCIONARIO:
+
 TEXTO_ESTADO_FISICO = {1: "Pésimo (Riesgoso)", 2: "Malo", 3: "Regular", 4: "Bueno", 5: "Excelente"}
 
 
