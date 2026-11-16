@@ -7,39 +7,9 @@
     <title>Alertas y chats - Ruta Sansana</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 24px; color: #1e293b; }
-        
-        /* Layout de dos columnas intercambiadas */
-        .page-container {
-            display: flex;
-            gap: 24px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Panel Izquierdo (Antes principal, ahora dimensiones de barra lateral) */
-        .sidebar-left {
-            width: 320px;
-            flex-shrink: 0;
-            background: #fff;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 20px;
-            box-sizing: border-box;
-            height: fit-content;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        /* Panel Derecho (Antes barra lateral, ahora dimensiones de contenedor principal ancho) */
-        .main-right {
-            flex-grow: 1;
-            background: #fff;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 24px;
-            box-sizing: border-box;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
+        .page-container { display: flex; gap: 24px; max-width: 1200px; margin: 0 auto; }
+        .sidebar-left { width: 320px; flex-shrink: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 20px; box-sizing: border-box; height: fit-content; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .main-right { flex-grow: 1; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 24px; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         h1 { color: #003366; font-size: 1.4em; margin-top: 0; }
         a { color: #0066cc; text-decoration: none; } a:hover { text-decoration: underline; }
         .card { background: #f8f9fa; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-top: 10px; }
@@ -47,37 +17,20 @@
         .info { background: #e0f2fe; border: 1px solid #bae6fd; }
         .warn { background: #fff7ed; border: 1px solid #fed7aa; }
         .crit { background: #ffebee; border: 1px solid #ffcdd2; }
-
-        /* Estilos del Buscador Inteligente */
         .selector-tipo { display: flex; gap: 10px; margin: 15px 0; }
-        .btn-tipo {
-            flex: 1; padding: 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9;
-            border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; color: #475569; font-size: 0.9em;
-        }
+        .btn-tipo { flex: 1; padding: 10px; text-align: center; border: 2px solid #cbd5e1; background: #f1f5f9; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; color: #475569; font-size: 0.9em; }
         .btn-tipo.active { background: #003366; color: white; border-color: #003366; }
-
         .search-box { position: relative; margin-bottom: 20px; }
-        .search-input {
-            width: 100%; padding: 12px 15px; font-size: 1em; border: 2px solid #cbd5e1;
-            border-radius: 6px; box-sizing: border-box; outline: none; transition: border-color 0.2s; background: #fff;
-        }
+        .search-input { width: 100%; padding: 12px 15px; font-size: 1em; border: 2px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; outline: none; transition: border-color 0.2s; background: #fff; }
         .search-input:focus { border-color: #003366; }
-
-        .resultados-lista {
-            position: absolute; top: 100%; left: 0; right: 0; background: white;
-            border: 1px solid #cbd5e1; border-top: none; border-radius: 0 0 6px 6px;
-            max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .resultado-item {
-            padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.95em; color: #1e293b; transition: filter 0.2s;
-        }
+        .resultados-lista { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-top: none; border-radius: 0 0 6px 6px; max-height: 250px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .resultado-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.95em; color: #1e293b; transition: filter 0.2s; }
         .resultado-item:hover { filter: brightness(0.95); font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="page-container">
-    <!-- PANEL IZQUIERDO (Categorías / Chats con dimensiones compactas) -->
     <div class="sidebar-left">
         <h3 style="color:#003366; margin-top: 0; font-size: 1.1em; border-bottom: 2px solid #003366; padding-bottom: 6px;">Chats de Recorridos</h3>
         {% for c in categorias %}
@@ -87,7 +40,6 @@
         {% endfor %}
     </div>
 
-    <!-- PANEL DERECHO (Contenido principal ancho: Buscador y Alertas) -->
     <div class="main-right">
         <a href="/">← Volver al mapa</a>
         <h1>Alertas y chats 🚌</h1>
@@ -96,7 +48,6 @@
             <div class="alerta {{ a.severidad }}"><strong>⚠ {{ a.titulo }}</strong>{% if a.mensaje %}<br>{{ a.mensaje }}{% endif %}</div>
         {% endfor %}
 
-        <!-- BUSCADOR INTELIGENTE -->
         <h3 style="color:#003366; margin-top: 25px;">Buscar micro o paradero</h3>
         
         <div class="selector-tipo">
@@ -111,7 +62,6 @@
     </div>
 </div>
 
-<!-- Inyección limpia de datos en formato JSON nativo -->
 {{ micros_json|json_script:"micros-data" }}
 {{ paraderos_json|json_script:"paraderos-data" }}
 
@@ -154,12 +104,12 @@
 
         if (tipoActual === 'micro') {
             resultados = micros.filter(m => 
-                m.numero.toLowerCase().includes(query) || 
-                m.linea.toLowerCase().includes(query)
+                String(m.numero || '').toLowerCase().includes(query) || 
+                String(m.linea || '').toLowerCase().includes(query)
             );
         } else {
             resultados = paraderos.filter(p => 
-                p.nombre.toLowerCase().includes(query)
+                String(p.nombre || '').toLowerCase().includes(query)
             );
         }
 

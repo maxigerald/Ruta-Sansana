@@ -10,7 +10,7 @@ from rutasansana.models import CategoriaRuta, Micro, Paradero
 from alertas.models import ReporteEstado
 from alertas.services import alertas_activas, estado_micro, evaluar_no_para, serializar_alerta
 
-COOLDOWN_MIN = 3   # un mismo navegador solo puede reportar una micro cada 3 min
+COOLDOWN_MIN = 3
 
 @require_GET
 def mapa_micros(request):
@@ -54,7 +54,6 @@ def mapa_micros(request):
             coords_recorrido = raw_coords
 
         if raw_coords:
-            # PostGIS devuelve (lng, lat), Leaflet necesita [lat, lng]
             start_coord = [raw_coords[0][1], raw_coords[0][0]]
             end_coord = [raw_coords[-1][1], raw_coords[-1][0]]
 
@@ -109,6 +108,7 @@ def api_detalle_micro(request, micro_id):
 @require_GET
 def sala(request, categoria_id):
     categoria = get_object_or_404(CategoriaRuta, pk=categoria_id)
+    paraderos = Paradero.objects.all().order_by('nombre')
     paradero = None
     if request.GET.get("paradero"):
         paradero = Paradero.objects.filter(pk=request.GET["paradero"]).first()
@@ -120,6 +120,7 @@ def sala(request, categoria_id):
     return render(request, "alertas/sala.html", {
         "categoria": categoria,
         "micros": categoria.micros.all(),
+        "paraderos": paraderos,
         "alertas": alertas_activas(categoria=categoria),
         "estados_iniciales_json": estados_iniciales,
     })

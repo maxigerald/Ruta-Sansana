@@ -8,10 +8,8 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; color: #1e293b; overflow: hidden; }
         
-        /* Panel Izquierdo: Chat (Dimensiones compactas) */
         #izq { width: 380px; padding: 20px; background: #f8f9fa; display: flex; flex-direction: column; box-sizing: border-box; box-shadow: 2px 0 5px rgba(0,0,0,.1); height: 100vh; }
         
-        /* Panel Derecho: Micros y Alertas (Área principal amplia) */
         #der { flex: 1; padding: 20px; background: #fff; overflow-y: auto; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; gap: 15px; }
 
         h2 { color: #003366; font-size: 1.2em; margin: 8px 0; }
@@ -22,7 +20,6 @@
         .warn { background: #fff7ed; border: 1px solid #fed7aa; }
         .crit { background: #ffebee; border: 1px solid #ffcdd2; }
         
-        /* Cuadrícula para distribuir las tarjetas de las micros manteniendo sus dimensiones */
         .micros-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -32,7 +29,6 @@
 
         .micro { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; transition: all 0.3s ease; box-sizing: border-box; cursor: pointer; }
         
-        /* Estado seleccionado estricto por clase JS (sin conflictos de :target) */
         .micro.selected { 
             border: 2px solid #dc2626 !important; 
             box-shadow: 0 0 12px rgba(220, 38, 38, 0.4); 
@@ -43,7 +39,6 @@
         .estado { font-size: .88em; margin: 4px 0; }
         .poco { color: #d9534f; font-size: .82em; font-style: italic; }
         
-        /* Formularios y campos de reporte */
         .form-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .campo-grupo { display: flex; flex-direction: column; gap: 3px; }
         .campo-label { font-size: 0.8em; font-weight: bold; color: #475569; display: flex; align-items: center; gap: 4px; }
@@ -52,7 +47,6 @@
         select, button, input { font-size: .9em; padding: 6px 8px; border-radius: 5px; border: 1px solid #cbd5e1; }
         select { background-color: #fff; cursor: pointer; }
 
-        /* Colores de baja opacidad (RGBA) para las opciones de condición */
         .opt-5 { background-color: rgba(34, 197, 94, 0.15); color: #15803d; font-weight: bold; }
         .opt-4 { background-color: rgba(132, 204, 22, 0.15); color: #4d7c0f; font-weight: bold; }
         .opt-3 { background-color: rgba(234, 179, 8, 0.15); color: #a16207; font-weight: bold; }
@@ -76,7 +70,6 @@
 </head>
 <body>
 
-<!-- PANEL IZQUIERDO: Chat (Dimensiones compactas) -->
 <div id="izq">
     <div>
         <a href="/">← Mapa</a> · <a href="{% url 'alertas:indice' %}">Otros tipos</a>
@@ -93,7 +86,6 @@
     </div>
 </div>
 
-<!-- PANEL DERECHO: Micros y Alertas (Área ancha, con tarjetas organizadas) -->
 <div id="der">
     <div>
         <h2>{{ categoria.nombre }}</h2>
@@ -109,13 +101,32 @@
 
     <div class="titulo">Estado de las micros</div>
     <div class="micros-grid">
-        {% for m in micros %}
-            <div class="micro" id="micro-{{ m.id }}" data-id="{{ m.id }}">
-                <header>Micro {{ m.numero }} · {{ m.linea_nombre }}</header>
-                <div class="estado" data-campo="ocupacion">Cargando…</div>
-                <div class="estado" data-campo="parada"></div>
-                <div class="estado" data-campo="estado_fisico"></div>
-                <div class="poco" data-campo="poco"></div>
+        {% for item in micros_con_estado %}
+        {% with micro=item.micro est=item.estado %}
+            <div class="micro" id="micro-{{ micro.id }}" data-id="{{ micro.id }}">
+                <header>Micro {{ micro.numero }} · {{ micro.linea_nombre }}</header>
+                <div class="estado" data-campo="ocupacion">
+                    {% if est.ocupacion is not None %}
+                        👥 Ocupación: {{ est.ocupacion_texto }} ({{ est.ocupacion }}/3)
+                    {% else %}
+                        👥 Sin reportes recientes
+                    {% endif %}
+                </div>
+                <div class="estado" data-campo="parada">
+                    {% if est.pct_no_paro is not None %}
+                        🛑 {{ est.pct_no_paro }}% reporta que no paró
+                    {% endif %}
+                </div>
+                <div class="estado" data-campo="estado_fisico">
+                    {% if est.estado_fisico_texto and est.estado_fisico_texto != "Sin datos" %}
+                        🛠️ Condición: <strong>{{ est.estado_fisico_texto }}</strong>
+                    {% endif %}
+                </div>
+                <div class="poco" data-campo="poco">
+                    {% if est.reportes > 0 and not est.confiable %}
+                        Pocos reportes; el dato puede variar.
+                    {% endif %}
+                </div>
 
                 <div class="form-grid">
                     <div class="campo-grupo">
@@ -158,6 +169,7 @@
                 <div class="msg-ok" data-campo="ok"></div>
                 <div class="msg-err" data-campo="err"></div>
             </div>
+        {% endwith %}
         {% empty %}
             <div class="estado">Este tipo aún no tiene micros asignadas.</div>
         {% endfor %}
@@ -167,10 +179,8 @@
 <script>
 const CSRF = "{{ csrf_token }}";
 const CATEGORIA = {{ categoria.id }};
-const estadosIniciales = {{ estados_iniciales_json|safe }};
 const $ = (root, campo) => root.querySelector(`[data-campo="${campo}"]`);
 
-/* ---------- Gestión estricta de selección única y limpieza de formularios ---------- */
 function limpiarFormularioMicro(card) {
     $(card, "sel-ocupacion").value = "";
     $(card, "sel-parada").value = "sin_dato";
@@ -222,7 +232,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-/* ---------- Estado y reportes (Instantáneo) ---------- */
 function pintarEstado(card, e) {
     if (!e) return;
     $(card, "ocupacion").textContent = e.ocupacion !== null
@@ -239,15 +248,6 @@ function pintarEstado(card, e) {
     $(card, "poco").textContent = (e.reportes > 0 && !e.confiable) ? "Pocos reportes; el dato puede variar." : "";
 }
 
-// Pintar de inmediato con los datos pre-cargados por el servidor (0ms de espera)
-microCards.forEach(card => {
-    const microId = card.dataset.id;
-    if (estadosIniciales[microId]) {
-        pintarEstado(card, estadosIniciales[microId]);
-    }
-});
-
-// Refresco en segundo plano cada 20 segundos
 async function cargarTodosLosEstados() {
     try {
         const r = await fetch(`/alertas/api/categoria/${CATEGORIA}/estados/`);
@@ -284,11 +284,13 @@ microCards.forEach(card => {
             return;
         }
 
-        const body = new URLSearchParams({
+        const bodyData = {
             ocupacion: ocupacionVal,
             parada: $(card, "sel-parada").value,
             estado_fisico: $(card, "sel-estado-fisico").value,
-        });
+        };
+
+        const body = new URLSearchParams(bodyData);
 
         const r = await fetch(`/alertas/api/micro/${card.dataset.id}/reportar/`, {
             method: "POST", headers: {"X-CSRFToken": CSRF}, body,
@@ -296,14 +298,13 @@ microCards.forEach(card => {
         const d = await r.json();
         if (r.ok) { 
             $(card, "ok").textContent = "¡Gracias por tu reporte!"; 
-            pintarEstado(card, d); // <--- ¡Actualización instantánea con el resultado del reporte!
+            pintarEstado(card, d); 
         } else { 
             $(card, "err").textContent = d.error || "No se pudo enviar"; 
         }
     };
 });
 
-/* ---------- Chat de difusión con expiración a los 3 minutos ---------- */
 const chat = document.getElementById("chat");
 
 function linea(texto, clase, negrita) {
@@ -317,10 +318,9 @@ function linea(texto, clase, negrita) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-// Limpiar mensajes que tengan más de 3 minutos (180,000 ms) cada 5 segundos
 setInterval(() => {
     const __ahora = Date.now();
-    const tiempoVida = 3 * 60 * 1000; // 3 minutos
+    const tiempoVida = 3 * 60 * 1000;
     const mensajes = chat.querySelectorAll("p");
     
     mensajes.forEach(p => {
